@@ -27,14 +27,14 @@ export default function AdminPanel() {
     { id: 10, name: "New Applicant", email: "newperson@gmail.com", discipline: "", status: "pending", joined: "Mar 1, 2026", paid: false },
   ]);
 
-  const [contentItems, setContentItems] = useState([
-    { id: 1, title: "The Problem You Were Hired to Solve", type: "conference", speaker: "Mannorr", day: 1, status: "published" },
-    { id: 2, title: "Creative Integrity in Practice", type: "conference", speaker: "Petra & Thizkid", day: 2, status: "published" },
-    { id: 3, title: "Systems That Scale Your Thinking", type: "conference", speaker: "Dexios", day: 3, status: "published" },
-    { id: 4, title: "Problem-Solving Framework", type: "resource", speaker: "Form & Meaning", day: null, status: "published" },
-    { id: 5, title: "Brand Thinking Workbook", type: "resource", speaker: "Form & Meaning", day: null, status: "draft" },
-    { id: 6, title: "Q&A Session — Feb 27", type: "recording", speaker: "Community", day: null, status: "published" },
-  ]);
+  const [contentItems, setContentItems] = useState([]);
+
+  // Load real content from API on mount
+  const [contentLoaded, setContentLoaded] = useState(false);
+  if (!contentLoaded && typeof window !== "undefined") {
+    setContentLoaded(true);
+    fetch("/api/admin/content").then(r => r.json()).then(d => { if (d.data) setContentItems(d.data); }).catch(() => {});
+  }
 
   const [eventItems, setEventItems] = useState([
     { id: 1, title: "Designing with Intention", date: "Mar 14, 2026", type: "Workshop", host: "Mannorr", rsvps: 7, spots: 12, status: "upcoming" },
@@ -75,9 +75,15 @@ export default function AdminPanel() {
     showToast("Member removed.");
   };
 
-  const toggleContentStatus = (id) => {
-    setContentItems(items => items.map(i => i.id === id ? { ...i, status: i.status === "published" ? "draft" : "published" } : i));
-    showToast("Content updated.");
+  const toggleContentStatus = async (id) => {
+    const item = contentItems.find(i => i.id === id);
+    if (!item) return;
+    const newStatus = item.status === "published" ? "draft" : "published";
+    try {
+      await fetch("/api/admin/content", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: newStatus }) });
+      setContentItems(items => items.map(i => i.id === id ? { ...i, status: newStatus } : i));
+      showToast("Content updated.");
+    } catch (e) { showToast("Error updating."); }
   };
 
   const togglePin = (id) => {
@@ -299,59 +305,151 @@ export default function AdminPanel() {
     </div>
   );
 
-  const Content = () => (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ ...serif, fontSize: 22 }}>Content ({contentItems.length})</h2>
-        <button onClick={() => setShowAddContent(!showAddContent)} style={btnRed}><PlusI s={13} /> Add content</button>
-      </div>
-      {showAddContent && (
-        <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>New content</h3>
-          <div style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
-              <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder="Content title" /></div>
-              <div><label style={labelStyle}>Speaker</label><input style={inputStyle} placeholder="Speaker name" /></div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }} className="fm-form-grid">
-              <div>
-                <label style={labelStyle}>Type</label>
-                <select style={{ ...inputStyle, cursor: "pointer" }}><option>Conference</option><option>Resource</option><option>Recording</option></select>
-              </div>
-              <div><label style={labelStyle}>Mux Playback ID</label><input style={inputStyle} placeholder="For videos" /></div>
-              <div><label style={labelStyle}>File URL</label><input style={inputStyle} placeholder="For downloads" /></div>
-            </div>
-            <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} placeholder="What this content covers…" /></div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setShowAddContent(false); showToast("Content added."); }} style={btnRed}>Publish</button>
-              <button onClick={() => { setShowAddContent(false); showToast("Saved as draft."); }} style={btnOutline}>Save draft</button>
-              <button onClick={() => setShowAddContent(false)} style={btnGhost}>Cancel</button>
-            </div>
-          </div>
+  const Content = () => {
+    const [form, setForm] = useState({ title: "", speaker: "", type: "conference", day: "", video_url: "", description: "" });
+    const [saving, setSaving] = useState(false);
+    const [editing, setEditing] = useState(null);
+
+    const getYtId = (url) => { const m = (url||"").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^?&]+)/); return m ? m[1] : null; };
+    const ytThumb = getYtId(form.video_url);
+
+    const resetForm = () => { setForm({ title: "", speaker: "", type: "conference", day: "", video_url: "", description: "" }); setEditing(null); setShowAddContent(false); };
+
+    const saveContent = async (status) => {
+      if (!form.title.trim()) return showToast("Title is required.");
+      setSaving(true);
+      try {
+        const body = { title: form.title, speaker: form.speaker, type: form.type, video_url: form.video_url, description: form.description, status, day: form.day ? parseInt(form.day) : null };
+        const method = editing ? "PATCH" : "POST";
+        if (editing) body.id = editing;
+        const res = await fetch("/api/admin/content", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error("Failed");
+        const { data } = await res.json();
+        if (editing) {
+          setContentItems(items => items.map(i => i.id === editing ? data : i));
+        } else {
+          setContentItems(items => [data, ...items]);
+        }
+        resetForm();
+        showToast(editing ? "Content updated." : "Content added.");
+      } catch (e) { showToast("Error saving. Try again."); }
+      setSaving(false);
+    };
+
+    const deleteContent = async (id) => {
+      if (!confirm("Delete this content?")) return;
+      try {
+        await fetch("/api/admin/content", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+        setContentItems(items => items.filter(i => i.id !== id));
+        showToast("Content deleted.");
+      } catch (e) { showToast("Error deleting."); }
+    };
+
+    const startEdit = (item) => {
+      setForm({ title: item.title, speaker: item.speaker || "", type: item.type, day: item.day ? String(item.day) : "", video_url: item.video_url || "", description: item.description || "" });
+      setEditing(item.id);
+      setShowAddContent(true);
+    };
+
+    return (
+      <div style={{ display: "grid", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <h2 style={{ ...serif, fontSize: 22 }}>Content ({contentItems.length})</h2>
+          <button onClick={() => { resetForm(); setShowAddContent(!showAddContent); }} style={btnRed}><PlusI s={13} /> Add video</button>
         </div>
-      )}
-      <div style={{ display: "grid", gap: 10 }}>
-        {contentItems.map(item => (
-          <div key={item.id} style={{ ...cardStyle, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-                <span style={{ ...mono, fontSize: 10, color: c.textSoft, textTransform: "uppercase" }}>{item.type}</span>
-                {item.day && <span style={{ ...mono, fontSize: 10, color: c.red }}>Day {item.day}</span>}
+
+        {showAddContent && (
+          <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{editing ? "Edit content" : "Add YouTube video"}</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+
+              {/* YouTube URL — the star */}
+              <div>
+                <label style={labelStyle}>YouTube URL</label>
+                <input style={inputStyle} placeholder="https://www.youtube.com/watch?v=..." value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
               </div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{item.title}</div>
-              <div style={{ ...mono, fontSize: 11, color: c.textSoft }}>{item.speaker}</div>
-            </div>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <StatusBadge status={item.status} />
-              <button onClick={() => toggleContentStatus(item.id)} style={{ ...btnGhost, fontSize: 11 }}>
-                {item.status === "published" ? "Unpublish" : "Publish"}
-              </button>
+
+              {/* Live thumbnail preview */}
+              {ytThumb && (
+                <div style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${c.border}`, maxWidth: 400 }}>
+                  <img src={`https://img.youtube.com/vi/${ytThumb}/hqdefault.jpg`} alt="YouTube thumbnail" style={{ width: "100%", display: "block", aspectRatio: "16/9", objectFit: "cover" }} />
+                  <div style={{ padding: "8px 12px", background: c.surface, ...mono, fontSize: 11, color: c.mint }}>✓ Thumbnail detected</div>
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
+                <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder="e.g. The Problem You Were Hired to Solve" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Speaker</label><input style={inputStyle} placeholder="e.g. Mannorr" value={form.speaker} onChange={e => setForm(f => ({ ...f, speaker: e.target.value }))} /></div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
+                <div>
+                  <label style={labelStyle}>Type</label>
+                  <select style={{ ...inputStyle, cursor: "pointer" }} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                    <option value="conference">Conference</option>
+                    <option value="recording">Recording</option>
+                  </select>
+                </div>
+                <div><label style={labelStyle}>Day (conference only)</label><input style={inputStyle} type="number" placeholder="1, 2, 3…" value={form.day} onChange={e => setForm(f => ({ ...f, day: e.target.value }))} /></div>
+              </div>
+
+              <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} placeholder="What this video covers…" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => saveContent("published")} disabled={saving} style={btnRed}>{saving ? "Saving…" : editing ? "Update & Publish" : "Publish"}</button>
+                <button onClick={() => saveContent("draft")} disabled={saving} style={btnOutline}>{editing ? "Update as Draft" : "Save draft"}</button>
+                <button onClick={resetForm} style={btnGhost}>Cancel</button>
+              </div>
             </div>
           </div>
-        ))}
+        )}
+
+        {/* Content list */}
+        <div style={{ display: "grid", gap: 10 }}>
+          {contentItems.length === 0 && (
+            <div style={{ ...cardStyle, padding: 40, textAlign: "center" }}>
+              <p style={{ color: c.textMuted, fontSize: 14 }}>No content yet. Add your first YouTube video above.</p>
+            </div>
+          )}
+          {contentItems.map(item => {
+            const vid = ((item.video_url||"").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^?&]+)/) || [])[1];
+            return (
+              <div key={item.id} style={{ ...cardStyle, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                {/* Thumbnail */}
+                {vid ? (
+                  <div style={{ width: 80, height: 45, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "#000" }}>
+                    <img src={`https://img.youtube.com/vi/${vid}/default.jpg`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                ) : (
+                  <div style={{ width: 80, height: 45, borderRadius: 4, background: c.surface, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ ...mono, fontSize: 9, color: c.textSoft }}>No video</span>
+                  </div>
+                )}
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+                    <span style={{ ...mono, fontSize: 10, color: c.textSoft, textTransform: "uppercase" }}>{item.type}</span>
+                    {item.day && <span style={{ ...mono, fontSize: 10, color: c.red }}>Day {item.day}</span>}
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{item.title}</div>
+                  <div style={{ ...mono, fontSize: 11, color: c.textSoft }}>{item.speaker}</div>
+                </div>
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                  <StatusBadge status={item.status} />
+                  <button onClick={() => startEdit(item)} style={{ ...btnGhost, fontSize: 11 }}>Edit</button>
+                  <button onClick={() => toggleContentStatus(item.id)} style={{ ...btnGhost, fontSize: 11 }}>
+                    {item.status === "published" ? "Unpublish" : "Publish"}
+                  </button>
+                  <button onClick={() => deleteContent(item.id)} style={{ ...btnGhost, fontSize: 11, color: c.red }}>Delete</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const Events = () => (
     <div style={{ display: "grid", gap: 16 }}>
