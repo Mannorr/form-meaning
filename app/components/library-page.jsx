@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 // FORM & MEANING — LIBRARY PAGE
-// Wired to real Supabase data via server component props
+// Fetches content client-side for guaranteed fresh data
 // ═══════════════════════════════════════════════════════════════
 
 export default function LibraryPage({ content: serverContent = [] }) {
@@ -12,11 +12,19 @@ export default function LibraryPage({ content: serverContent = [] }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [activeVideo, setActiveVideo] = useState(null);
+  const [content, setContent] = useState(serverContent);
   const dark = theme === "dark";
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
-  // Use real data from props
-  const content = serverContent;
+  // Client-side fetch to always get fresh data
+  useEffect(() => {
+    fetch("/api/admin/content")
+      .then(r => r.json())
+      .then(d => {
+        if (d.data) setContent(d.data.filter(i => i.status === "published"));
+      })
+      .catch(() => {});
+  }, []);
 
   const filtered = content.filter(item => {
     const matchesFilter = filter === "all" || item.type === filter;
