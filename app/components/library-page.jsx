@@ -103,34 +103,52 @@ export default function LibraryPage({ content: serverContent = [] }) {
     { key: "recording", label: "Recordings" },
   ];
 
+  // ─── YouTube helpers ────────────────────────────────────────
+  const getYouTubeId = (url) => {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^?&]+)/);
+    return match ? match[1] : null;
+  };
+  const getYouTubeThumb = (url) => {
+    const id = getYouTubeId(url);
+    return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+  };
+
   // ─── Video Modal ───────────────────────────────────────────
-  const VideoModal = ({ video, onClose }) => (
-    <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, animation: "fadeIn 0.2s ease" }} role="dialog" aria-modal="true">
-      <div style={{ width: "100%", maxWidth: 780, borderRadius: 10, background: c.cardBg, border: `1px solid ${c.borderStrong}`, overflow: "hidden", boxShadow: "0 32px 64px rgba(0,0,0,0.4)" }}>
-        <div style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-          {video.mux_playback_id ? (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", ...mono, fontSize: 13 }}>
-              Mux Player: {video.mux_playback_id}
-            </div>
-          ) : (
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-              <PlayIco s={28} />
-            </div>
-          )}
-          <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", cursor: "pointer", padding: 8, borderRadius: 4 }}><XIco /></button>
-        </div>
-        <div style={{ padding: "20px 24px" }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-            {video.day && <span style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.redSoft, color: c.red, border: `1px solid ${c.redBorder}`, textTransform: "uppercase" }}>Day {video.day}</span>}
-            {(video.tags || []).map((tag, i) => <span key={i} style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.surface, color: c.textMuted, border: `1px solid ${c.border}`, textTransform: "uppercase" }}>{tag}</span>)}
+  const VideoModal = ({ video, onClose }) => {
+    const ytId = getYouTubeId(video.video_url);
+    return (
+      <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, animation: "fadeIn 0.2s ease" }} role="dialog" aria-modal="true">
+        <div style={{ width: "100%", maxWidth: 780, borderRadius: 10, background: c.cardBg, border: `1px solid ${c.borderStrong}`, overflow: "hidden", boxShadow: "0 32px 64px rgba(0,0,0,0.4)" }}>
+          <div style={{ width: "100%", aspectRatio: "16/9", background: "#000", position: "relative" }}>
+            {ytId ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`}
+                style={{ width: "100%", height: "100%", border: "none" }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={video.title}
+              />
+            ) : (
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)", ...mono, fontSize: 14 }}>
+                No video uploaded yet
+              </div>
+            )}
+            <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", cursor: "pointer", padding: 8, borderRadius: 4, zIndex: 2 }}><XIco /></button>
           </div>
-          <h2 style={{ ...serif, fontSize: 22, lineHeight: 1.2, marginBottom: 4 }}>{video.title}</h2>
-          <p style={{ ...mono, fontSize: 12, color: c.textSoft, marginBottom: 10 }}>{video.speaker}</p>
-          <p style={{ color: c.textMuted, fontSize: 14, lineHeight: 1.6 }}>{video.description}</p>
+          <div style={{ padding: "20px 24px" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              {video.day && <span style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.redSoft, color: c.red, border: `1px solid ${c.redBorder}`, textTransform: "uppercase" }}>Day {video.day}</span>}
+              {(video.tags || []).map((tag, i) => <span key={i} style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.surface, color: c.textMuted, border: `1px solid ${c.border}`, textTransform: "uppercase" }}>{tag}</span>)}
+            </div>
+            <h2 style={{ ...serif, fontSize: 22, lineHeight: 1.2, marginBottom: 4 }}>{video.title}</h2>
+            <p style={{ ...mono, fontSize: 12, color: c.textSoft, marginBottom: 10 }}>{video.speaker}</p>
+            <p style={{ color: c.textMuted, fontSize: 14, lineHeight: 1.6 }}>{video.description}</p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ═══════════════════════════════════════════════════════════
   return (
@@ -223,10 +241,12 @@ export default function LibraryPage({ content: serverContent = [] }) {
               <span style={{ ...mono, fontSize: 10, padding: "2px 8px", borderRadius: 3, background: c.amberSoft, color: c.amber, border: `1px solid ${c.amberBorder}`, fontWeight: 600, textTransform: "uppercase" }}>Required viewing</span>
             </div>
             <div className="fm-conf-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-              {conferenceItems.map(item => (
+              {conferenceItems.map(item => {
+                const thumb = getYouTubeThumb(item.video_url);
+                return (
                 <div key={item.id} className="fm-card-hover" onClick={() => setActiveVideo(item)} style={{ ...cardStyle, overflow: "hidden" }}>
                   <div style={{ overflow: "hidden" }}>
-                    <div className="fm-video-thumb" style={{ width: "100%", aspectRatio: "16/9", background: `linear-gradient(135deg, ${c.red}18, ${c.bg3})`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                    <div className="fm-video-thumb" style={{ width: "100%", aspectRatio: "16/9", background: thumb ? `url(${thumb}) center/cover` : `linear-gradient(135deg, ${c.red}18, ${c.bg3})`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                       <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(230,50,40,0.9)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(230,50,40,0.3)" }}>
                         <span style={{ color: "#fff" }}><PlayIco s={20} /></span>
                       </div>
@@ -244,7 +264,8 @@ export default function LibraryPage({ content: serverContent = [] }) {
                     </p>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
