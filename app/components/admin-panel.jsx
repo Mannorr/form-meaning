@@ -43,11 +43,14 @@ export default function AdminPanel() {
     { id: 4, title: "Questions & Answers", date: "Feb 27, 2026", type: "Q&A", host: "Community", rsvps: 18, spots: null, status: "completed" },
   ]);
 
-  const [announcementItems, setAnnouncementItems] = useState([
-    { id: 1, title: "March Challenge: Redesign a Public Service", date: "Mar 1, 2026", pinned: true, status: "published" },
-    { id: 2, title: "Conference recordings now in the library", date: "Feb 28, 2026", pinned: false, status: "published" },
-    { id: 3, title: "New resource: Problem-Solving Framework", date: "Feb 25, 2026", pinned: false, status: "published" },
-  ]);
+  const [announcementItems, setAnnouncementItems] = useState([]);
+
+  // Load real announcements from API on mount
+  const [announcementsLoaded, setAnnouncementsLoaded] = useState(false);
+  if (!announcementsLoaded && typeof window !== "undefined") {
+    setAnnouncementsLoaded(true);
+    fetch("/api/admin/announcements").then(r => r.json()).then(d => { if (d.data) setAnnouncementItems(d.data); }).catch(() => {});
+  }
 
   // ─── State for modals/forms ────────────────────────────────
   const [memberSearch, setMemberSearch] = useState("");
@@ -86,9 +89,14 @@ export default function AdminPanel() {
     } catch (e) { showToast("Error updating."); }
   };
 
-  const togglePin = (id) => {
-    setAnnouncementItems(items => items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
-    showToast("Announcement updated.");
+  const togglePin = async (id) => {
+    const item = announcementItems.find(i => i.id === id);
+    if (!item) return;
+    try {
+      await fetch("/api/admin/announcements", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, pinned: !item.pinned }) });
+      setAnnouncementItems(items => items.map(i => i.id === id ? { ...i, pinned: !i.pinned } : i));
+      showToast("Announcement updated.");
+    } catch (e) { showToast("Error updating."); }
   };
 
   // ─── Brand Tokens ──────────────────────────────────────────
@@ -500,51 +508,113 @@ export default function AdminPanel() {
     </div>
   );
 
-  const Announcements = () => (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ ...serif, fontSize: 22 }}>Announcements ({announcementItems.length})</h2>
-        <button onClick={() => setShowAddAnnouncement(!showAddAnnouncement)} style={btnRed}><PlusI s={13} /> Post announcement</button>
-      </div>
-      {showAddAnnouncement && (
-        <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>New announcement</h3>
-          <div style={{ display: "grid", gap: 12 }}>
-            <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder="Announcement title" /></div>
-            <div><label style={labelStyle}>Body</label><textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="What you want to say to the community…" /></div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setShowAddAnnouncement(false); showToast("Announcement posted."); }} style={btnRed}>Post</button>
-              <button onClick={() => setShowAddAnnouncement(false)} style={btnGhost}>Cancel</button>
-            </div>
-          </div>
+  const Announcements = () => {
+    const [form, setForm] = useState({ title: "", body: "", pinned: false });
+    const [saving, setSaving] = useState(false);
+    const [editing, setEditing] = useState(null);
+
+    const resetForm = () => { setForm({ title: "", body: "", pinned: false }); setEditing(null); setShowAddAnnouncement(false); };
+
+    const saveAnnouncement = async (status) => {
+      if (!form.title.trim()) return showToast("Title is required.");
+      setSaving(true);
+      try {
+        const body = { title: form.title, body: form.body, pinned: form.pinned, status };
+        const method = editing ? "PATCH" : "POST";
+        if (editing) body.id = editing;
+        const res = await fetch("/api/admin/announcements", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error("Failed");
+        const { data } = await res.json();
+        if (editing) {
+          setAnnouncementItems(items => items.map(i => i.id === editing ? data : i));
+        } else {
+          setAnnouncementItems(items => [data, ...items]);
+        }
+        resetForm();
+        showToast(editing ? "Announcement updated." : "Announcement posted.");
+      } catch (e) { showToast("Error saving. Try again."); }
+      setSaving(false);
+    };
+
+    const deleteAnnouncement = async (id) => {
+      if (!confirm("Delete this announcement?")) return;
+      try {
+        await fetch("/api/admin/announcements", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+        setAnnouncementItems(items => items.filter(i => i.id !== id));
+        showToast("Announcement deleted.");
+      } catch (e) { showToast("Error deleting."); }
+    };
+
+    const startEdit = (item) => {
+      setForm({ title: item.title, body: item.body || "", pinned: item.pinned || false });
+      setEditing(item.id);
+      setShowAddAnnouncement(true);
+    };
+
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+
+    return (
+      <div style={{ display: "grid", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <h2 style={{ ...serif, fontSize: 22 }}>Announcements ({announcementItems.length})</h2>
+          <button onClick={() => { resetForm(); setShowAddAnnouncement(!showAddAnnouncement); }} style={btnRed}><PlusI s={13} /> Post announcement</button>
         </div>
-      )}
-      <div style={{ display: "grid", gap: 10 }}>
-        {announcementItems.map(a => (
-          <div key={a.id} style={{
-            ...cardStyle, padding: "14px 18px",
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            gap: 12, flexWrap: "wrap",
-            borderLeft: a.pinned ? `3px solid ${c.red}` : undefined,
-          }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-                {a.pinned && <span style={{ color: c.red }}><PinI /></span>}
-                <span style={{ ...mono, fontSize: 10, color: c.textSoft }}>{a.date}</span>
+
+        {showAddAnnouncement && (
+          <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{editing ? "Edit announcement" : "New announcement"}</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder="Announcement title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Body</label><textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} placeholder="What you want to say to the community…" value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} /></div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: c.textMuted }}>
+                <input type="checkbox" checked={form.pinned} onChange={e => setForm(f => ({ ...f, pinned: e.target.checked }))} style={{ accentColor: c.red }} />
+                Pin to top of dashboard
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => saveAnnouncement("published")} disabled={saving} style={btnRed}>{saving ? "Saving…" : editing ? "Update" : "Post"}</button>
+                <button onClick={() => saveAnnouncement("draft")} disabled={saving} style={btnOutline}>Save as draft</button>
+                <button onClick={resetForm} style={btnGhost}>Cancel</button>
               </div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{a.title}</div>
-            </div>
-            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-              <StatusBadge status={a.status} />
-              <button onClick={() => togglePin(a.id)} style={{ ...btnGhost, fontSize: 11, color: a.pinned ? c.red : c.textSoft }}>
-                {a.pinned ? "Unpin" : "Pin"}
-              </button>
             </div>
           </div>
-        ))}
+        )}
+
+        {/* Announcements list */}
+        <div style={{ display: "grid", gap: 10 }}>
+          {announcementItems.length === 0 && (
+            <div style={{ ...cardStyle, padding: 40, textAlign: "center" }}>
+              <p style={{ color: c.textMuted, fontSize: 14 }}>No announcements yet. Post your first one above.</p>
+            </div>
+          )}
+          {announcementItems.map(a => (
+            <div key={a.id} style={{
+              ...cardStyle, padding: "14px 18px",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              gap: 12, flexWrap: "wrap",
+              borderLeft: a.pinned ? `3px solid ${c.red}` : undefined,
+            }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+                  {a.pinned && <span style={{ color: c.red }}><PinI /></span>}
+                  <span style={{ ...mono, fontSize: 10, color: c.textSoft }}>{fmtDate(a.created_at)}</span>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{a.title}</div>
+                {a.body && <div style={{ fontSize: 12, color: c.textSoft, marginTop: 2 }}>{a.body.length > 80 ? a.body.slice(0, 80) + "…" : a.body}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+                <StatusBadge status={a.status} />
+                <button onClick={() => startEdit(a)} style={{ ...btnGhost, fontSize: 11 }}>Edit</button>
+                <button onClick={() => togglePin(a.id)} style={{ ...btnGhost, fontSize: 11, color: a.pinned ? c.red : c.textSoft }}>
+                  {a.pinned ? "Unpin" : "Pin"}
+                </button>
+                <button onClick={() => deleteAnnouncement(a.id)} style={{ ...btnGhost, fontSize: 11, color: c.red }}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const sectionMap = { overview: <Overview />, members: <Members />, content: <Content />, events: <Events />, announcements: <Announcements /> };
 
