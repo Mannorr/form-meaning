@@ -190,12 +190,6 @@ export default function EventsPage() {
         :focus-visible { outline: 2px solid ${c.red}; outline-offset: 3px; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        @keyframes grain { 0%,100%{transform:translate(0,0)}10%{transform:translate(-5%,-10%)}30%{transform:translate(7%,-25%)}50%{transform:translate(-15%,10%)}70%{transform:translate(0%,15%)}90%{transform:translate(-10%,10%)}}
-        .fm-grain::before {
-          content:""; position:fixed; inset:-100%; width:300%; height:300%;
-          background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-          opacity:${c.grain}; pointer-events:none; z-index:1000;
-          animation:grain 3s steps(6) infinite;
         }
         .au { animation: fadeUp 0.5s ease both; }
         .au1 { animation: fadeUp 0.5s ease 0.06s both; }
@@ -214,7 +208,6 @@ export default function EventsPage() {
         }
       `}</style>
 
-      <div className="fm-grain" />
 
       {/* ═══ NAVBAR ═══════════════════════════════════════════ */}
       <header style={{

@@ -37,6 +37,7 @@ export async function POST(req) {
 
     // Generate a temporary password and create Supabase auth account
     const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
+    let isNewUser = true;
     
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -44,8 +45,16 @@ export async function POST(req) {
       email_confirm: true,
     });
 
-    // If user already exists, that's fine
-    if (authError && !authError.message.includes("already")) {
+    // If user already exists, update their password so they can still log in
+    if (authError && authError.message.includes("already")) {
+      isNewUser = false;
+      // Find the existing user and update their password
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = users?.find(u => u.email === email);
+      if (existingUser) {
+        await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: tempPassword });
+      }
+    } else if (authError) {
       console.error("Auth create error:", authError.message);
     }
 
@@ -57,7 +66,7 @@ export async function POST(req) {
       await resend.emails.send({
         from: process.env.RESEND_FROM || "onboarding@resend.dev",
         to: email,
-        subject: "You're in | Form & Meaning",
+        subject: isNewUser ? "You're in | Form & Meaning" : "Payment confirmed | Form & Meaning",
         html: `
           <div style="font-family:sans-serif;line-height:1.7;max-width:520px;">
             <h2 style="margin:0 0 16px;">Welcome to Form & Meaning.</h2>
