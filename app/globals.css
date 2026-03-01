@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fm-red: #D42B22;
+  --fm-mint: #1DB88E;
+  --fm-cream: #F5F0EB;
+  --fm-dark: #111111;
+}
+
+body {
+  font-family: 'Syne', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(212, 43, 34, 0.25);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+/* Focus */
+:focus-visible { outline: 2px solid var(--fm-red); outline-offset: 3px; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { 
+  outline: none; border-color: var(--fm-red) !important; 
+}
+
+/* Animations */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes grain { 
+  0%,100%{transform:translate(0,0)} 10%{transform:translate(-5%,-10%)} 
+  30%{transform:translate(7%,-25%)} 50%{transform:translate(-15%,10%)} 
+  70%{transform:translate(0%,15%)} 90%{transform:translate(-10%,10%)}
+}
+
+.au { animation: fadeUp 0.5s ease both; }
+.au1 { animation: fadeUp 0.5s ease 0.06s both; }
+.au2 { animation: fadeUp 0.5s ease 0.12s both; }
+.au3 { animation: fadeUp 0.5s ease 0.18s both; }
+.au4 { animation: fadeUp 0.5s ease 0.24s both; }
