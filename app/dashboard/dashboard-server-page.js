@@ -1,33 +1,80 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-
-export const dynamic = "force-dynamic";
 import DashboardPage from "../components/dashboard-page";
 
-export default async function Dashboard() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  // Fetch member profile
-  const { data: member } = await supabaseAdmin.from("memberships").select("*").eq("email", user?.email).maybeSingle();
-  
-  // Fetch announcements
-  const { data: announcements } = await supabaseAdmin.from("announcements").select("*").eq("status", "published").order("created_at", { ascending: false }).limit(5);
-  
-  // Fetch upcoming events
-  const { data: events } = await supabaseAdmin.from("events").select("*").gte("date", new Date().toISOString().split("T")[0]).order("date", { ascending: true }).limit(4);
-  
-  // Fetch recent content
-  const { data: content } = await supabaseAdmin.from("content").select("*").eq("status", "published").order("created_at", { ascending: false }).limit(4);
-  
-  // Fetch new members
-  const { data: newMembers } = await supabaseAdmin.from("memberships").select("name, discipline, created_at").eq("status", "active").order("created_at", { ascending: false }).limit(4);
+export const dynamic = "force-dynamic";
 
-  return <DashboardPage 
-    user={{ email: user?.email, ...member }} 
-    announcements={announcements || []} 
-    events={events || []} 
-    content={content || []} 
-    newMembers={newMembers || []} 
-  />;
+export default async function Dashboard() {
+  let user = {};
+  let announcements = [];
+  let events = [];
+  let content = [];
+  let newMembers = [];
+
+  try {
+    const { createSupabaseServerClient } = await import("@/lib/supabase-server");
+    const supabase = await createSupabaseServerClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    if (authUser?.email) {
+      const { data: member } = await supabaseAdmin
+        .from("memberships")
+        .select("*")
+        .eq("email", authUser.email)
+        .maybeSingle();
+      user = { email: authUser.email, ...member };
+    }
+  } catch (e) {
+    console.error("Dashboard auth error:", e.message);
+  }
+
+  try {
+    const { data } = await supabaseAdmin
+      .from("announcements")
+      .select("*")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(5);
+    announcements = data || [];
+  } catch (e) {}
+
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabaseAdmin
+      .from("events")
+      .select("*")
+      .gte("date", today)
+      .order("date", { ascending: true })
+      .limit(4);
+    events = data || [];
+  } catch (e) {}
+
+  try {
+    const { data } = await supabaseAdmin
+      .from("content")
+      .select("*")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(4);
+    content = data || [];
+  } catch (e) {}
+
+  try {
+    const { data } = await supabaseAdmin
+      .from("memberships")
+      .select("name, discipline, created_at")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(4);
+    newMembers = data || [];
+  } catch (e) {}
+
+  return (
+    <DashboardPage
+      user={user}
+      announcements={announcements}
+      events={events}
+      content={content}
+      newMembers={newMembers}
+    />
+  );
 }
