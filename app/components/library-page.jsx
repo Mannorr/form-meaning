@@ -167,10 +167,10 @@ export default function LibraryPage() {
   };
 
   const navLinks = [
-    { key: "dashboard", label: "Dashboard", icon: <HomeIco /> },
-    { key: "library", label: "Library", icon: <BookIco /> },
-    { key: "community", label: "Community", icon: <UsersIco /> },
-    { key: "events", label: "Events", icon: <CalIco /> },
+    { key: "dashboard", label: "Dashboard", icon: <HomeIco />, href: "/dashboard" },
+    { key: "library", label: "Library", icon: <BookIco />, href: "/library" },
+    { key: "community", label: "Community", icon: <UsersIco />, href: "/community" },
+    { key: "events", label: "Events", icon: <CalIco />, href: "/events" },
   ];
 
   const filters = [
@@ -308,7 +308,7 @@ export default function LibraryPage() {
           <button style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "none", border: "none", cursor: "pointer", color: c.text, ...sans,
-          }} aria-label="Home">
+          }} onClick={() => window.location.href="/dashboard"} aria-label="Home">
             <div style={{
               width: 32, height: 32, borderRadius: 3, background: c.red,
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -321,7 +321,7 @@ export default function LibraryPage() {
           </button>
           <nav className="fm-desk-nav" style={{ display: "flex", alignItems: "center", gap: 2 }}>
             {navLinks.map(link => (
-              <button key={link.key} style={{
+              <button key={link.key} onClick={() => window.location.href=link.href} style={{
                 ...btnGhost, gap: 6,
                 color: link.key === "library" ? c.red : c.textMuted,
                 fontWeight: link.key === "library" ? 700 : 500,
@@ -331,7 +331,7 @@ export default function LibraryPage() {
               </button>
             ))}
             <span style={{ width: 1, height: 20, background: c.border, margin: "0 6px" }} />
-            <button style={{ ...btnGhost, padding: "4px 8px" }}><Avatar name={user.name} /></button>
+            <button onClick={() => window.location.href="/profile"} style={{ ...btnGhost, padding: "4px 8px" }}><Avatar name={user.name} /></button>
             <button onClick={toggle} style={{ ...btnGhost, padding: 8 }} aria-label="Toggle theme">
               {dark ? <Sun /> : <Moon />}
             </button>
@@ -350,7 +350,7 @@ export default function LibraryPage() {
             display: "flex", flexDirection: "column", gap: 4,
           }}>
             {navLinks.map(link => (
-              <button key={link.key} onClick={() => setMenuOpen(false)} style={{
+              <button key={link.key} onClick={() => { setMenuOpen(false); window.location.href=link.href; }} style={{
                 ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%",
                 justifyContent: "flex-start", gap: 12,
                 color: link.key === "library" ? c.red : c.textMuted,

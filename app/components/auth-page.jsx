@@ -6,9 +6,9 @@ import { useState } from "react";
 // Covers: Login, Password Reset, Join/Payment via Paystack
 // ═══════════════════════════════════════════════════════════════
 
-export default function AuthPage() {
+export default function AuthPage({ initialPage = "login" }) {
   const [theme, setTheme] = useState("light");
-  const [activePage, setActivePage] = useState("login"); // login | join
+  const [activePage, setActivePage] = useState(initialPage); // login | join
   const dark = theme === "dark";
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
@@ -91,26 +91,31 @@ export default function AuthPage() {
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
       setError("");
       if (!email.trim()) { setError("Enter your email address."); return; }
       if (!password.trim()) { setError("Enter your password."); return; }
       setBusy(true);
-      // Simulated — in production this calls /api/auth/login
-      setTimeout(() => {
-        setBusy(false);
+      try {
+        const res = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+        const json = await res.json();
+        if (!res.ok) { setError(json.error || "Login failed."); setBusy(false); return; }
         setMessage("Login successful. Redirecting…");
-      }, 1200);
+        window.location.href = "/dashboard";
+      } catch { setError("Network error. Try again."); setBusy(false); }
     };
 
-    const handleReset = () => {
+    const handleReset = async () => {
       setError("");
       if (!email.trim()) { setError("Enter your email address."); return; }
       setBusy(true);
-      setTimeout(() => {
+      try {
+        const res = await fetch("/api/auth/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+        const json = await res.json();
+        if (!res.ok) { setError(json.error || "Failed to send reset link."); setBusy(false); return; }
         setBusy(false);
         setMode("success");
-      }, 1000);
+      } catch { setError("Network error. Try again."); setBusy(false); }
     };
 
     // ─── Reset Success ───────────────────────────────────────

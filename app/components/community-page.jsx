@@ -132,10 +132,10 @@ export default function CommunityPage() {
   };
 
   const navLinks = [
-    { key: "dashboard", label: "Dashboard", icon: <HomeI /> },
-    { key: "library", label: "Library", icon: <BookI /> },
-    { key: "community", label: "Community", icon: <UsersI /> },
-    { key: "events", label: "Events", icon: <CalI /> },
+    { key: "dashboard", label: "Dashboard", icon: <HomeI />, href: "/dashboard" },
+    { key: "library", label: "Library", icon: <BookI />, href: "/library" },
+    { key: "community", label: "Community", icon: <UsersI />, href: "/community" },
+    { key: "events", label: "Events", icon: <CalI />, href: "/events" },
   ];
 
   // ═══════════════════════════════════════════════════════════
@@ -473,7 +473,7 @@ export default function CommunityPage() {
           <button style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "none", border: "none", cursor: "pointer", color: c.text, ...sans,
-          }} aria-label="Home">
+          }} onClick={() => window.location.href="/dashboard"} aria-label="Home">
             <div style={{
               width: 32, height: 32, borderRadius: 3, background: c.red,
               display: "flex", alignItems: "center", justifyContent: "center",

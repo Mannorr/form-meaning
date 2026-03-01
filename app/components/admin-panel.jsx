@@ -234,7 +234,7 @@ export default function AdminPanel() {
           <button onClick={() => { setSection("content"); setShowAddContent(true); }} style={btnOutline}><PlusI /> Add content</button>
           <button onClick={() => { setSection("events"); setShowAddEvent(true); }} style={btnOutline}><PlusI /> Create event</button>
           <button onClick={() => { setSection("announcements"); setShowAddAnnouncement(true); }} style={btnOutline}><PlusI /> Post announcement</button>
-          <button style={btnOutline}><ExtI /> View site</button>
+          <button onClick={() => window.location.href="/"} style={btnOutline}><ExtI /> View site</button>
         </div>
       </div>
     </div>
@@ -527,7 +527,7 @@ export default function AdminPanel() {
             }}>
               {dark ? <Sun /> : <Moon />} {dark ? "Light mode" : "Dark mode"}
             </button>
-            <button style={{
+            <button onClick={() => window.location.href="/"} style={{
               display: "flex", alignItems: "center", gap: 8, width: "100%",
               padding: "9px 10px", borderRadius: 5, border: "none",
               background: "transparent", color: c.textSoft, cursor: "pointer",
@@ -535,7 +535,7 @@ export default function AdminPanel() {
             }}>
               <ExtI s={16} /> View site
             </button>
-            <button style={{
+            <button onClick={async () => { await fetch("/api/admin/logout", { method: "POST" }); window.location.href="/admin/login"; }} style={{
               display: "flex", alignItems: "center", gap: 8, width: "100%",
               padding: "9px 10px", borderRadius: 5, border: "none",
               background: "transparent", color: c.red, cursor: "pointer",

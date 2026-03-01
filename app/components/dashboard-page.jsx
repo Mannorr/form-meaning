@@ -119,10 +119,10 @@ export default function DashboardPage() {
 
   // ─── Nav Items ─────────────────────────────────────────────
   const navLinks = [
-    { key: "dashboard", label: "Dashboard", icon: <HomeIco /> },
-    { key: "library", label: "Library", icon: <BookIco /> },
-    { key: "community", label: "Community", icon: <UsersIco /> },
-    { key: "events", label: "Events", icon: <CalIco /> },
+    { key: "dashboard", label: "Dashboard", icon: <HomeIco />, href: "/dashboard" },
+    { key: "library", label: "Library", icon: <BookIco />, href: "/library" },
+    { key: "community", label: "Community", icon: <UsersIco />, href: "/community" },
+    { key: "events", label: "Events", icon: <CalIco />, href: "/events" },
   ];
 
   // ═══════════════════════════════════════════════════════════
@@ -177,7 +177,7 @@ export default function DashboardPage() {
       }}>
         <div style={{ ...maxW, display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
           {/* Logo */}
-          <button style={{
+          <button onClick={() => window.location.href="/dashboard"} style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "none", border: "none", cursor: "pointer", color: c.text, ...sans,
           }} aria-label="Home">
@@ -195,7 +195,7 @@ export default function DashboardPage() {
           {/* Desktop nav */}
           <nav className="fm-desk-nav" style={{ display: "flex", alignItems: "center", gap: 2 }}>
             {navLinks.map(link => (
-              <button key={link.key} style={{
+              <button key={link.key} onClick={() => window.location.href=link.href} style={{
                 ...btnGhost,
                 color: link.key === "dashboard" ? c.red : c.textMuted,
                 fontWeight: link.key === "dashboard" ? 700 : 500,
@@ -206,7 +206,7 @@ export default function DashboardPage() {
               </button>
             ))}
             <span style={{ width: 1, height: 20, background: c.border, margin: "0 6px" }} />
-            <button style={{ ...btnGhost, padding: "4px 8px" }} aria-label="Profile">
+            <button onClick={() => window.location.href="/profile"} style={{ ...btnGhost, padding: "4px 8px" }} aria-label="Profile">
               <Avatar name={user.name} size={32} />
             </button>
             <button onClick={toggle} style={{ ...btnGhost, padding: 8 }} aria-label="Toggle theme">
@@ -233,7 +233,7 @@ export default function DashboardPage() {
             display: "flex", flexDirection: "column", gap: 4,
           }}>
             {navLinks.map(link => (
-              <button key={link.key} onClick={() => setMenuOpen(false)} style={{
+              <button key={link.key} onClick={() => { setMenuOpen(false); window.location.href=link.href; }} style={{
                 ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%",
                 justifyContent: "flex-start", gap: 12,
                 color: link.key === "dashboard" ? c.red : c.textMuted,
@@ -243,10 +243,10 @@ export default function DashboardPage() {
               </button>
             ))}
             <div style={{ height: 1, background: c.border, margin: "8px 0" }} />
-            <button onClick={() => setMenuOpen(false)} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12 }}>
+            <button onClick={() => window.location.href="/profile"} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12 }}>
               <UserIco /> Profile
             </button>
-            <button style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12, color: c.red }}>
+            <button onClick={async () => { const { supabase } = await import("@/lib/supabase"); await supabase.auth.signOut(); window.location.href="/"; }} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12, color: c.red }}>
               <LogoutIco /> Log out
             </button>
           </div>
@@ -311,7 +311,7 @@ export default function DashboardPage() {
                   <span style={{ color: c.textSoft }}><CalIco /></span>
                   Upcoming events
                 </h2>
-                <button style={{ ...btnGhost, color: c.red, fontSize: 12, gap: 4 }}>
+                <button onClick={() => window.location.href="/events"} style={{ ...btnGhost, color: c.red, fontSize: 12, gap: 4 }}>
                   See all <ArrowR />
                 </button>
               </div>
@@ -379,7 +379,7 @@ export default function DashboardPage() {
                   <span style={{ color: c.textSoft }}><BookIco /></span>
                   Recent in library
                 </h2>
-                <button style={{ ...btnGhost, color: c.red, fontSize: 12, gap: 4 }}>
+                <button onClick={() => window.location.href="/library"} style={{ ...btnGhost, color: c.red, fontSize: 12, gap: 4 }}>
                   Open library <ArrowR />
                 </button>
               </div>
@@ -459,7 +459,7 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-              <button style={{
+              <button onClick={() => window.location.href="/community"} style={{
                 ...btnGhost, width: "100%", justifyContent: "center",
                 marginTop: 14, fontSize: 12, color: c.red, gap: 4,
                 borderTop: `1px solid ${c.border}`, borderRadius: 0,
@@ -486,7 +486,7 @@ export default function DashboardPage() {
               <p style={{ fontSize: 12, color: c.textMuted, marginBottom: 14, lineHeight: 1.5 }}>
                 Live conversations, session links, and updates happen here.
               </p>
-              <button style={{
+              <button onClick={() => window.open("https://chat.whatsapp.com/LQJAooUl2I6Godqz2s2CN6", "_blank")} style={{
                 ...btnBase, width: "100%", justifyContent: "center",
                 background: "#25D366", color: "#fff", fontSize: 13, padding: "10px 16px",
               }}>

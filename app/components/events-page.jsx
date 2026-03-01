@@ -157,10 +157,10 @@ export default function EventsPage() {
   };
 
   const navLinks = [
-    { key: "dashboard", label: "Dashboard", icon: <HomeI /> },
-    { key: "library", label: "Library", icon: <BookI /> },
-    { key: "community", label: "Community", icon: <UsersI /> },
-    { key: "events", label: "Events", icon: <CalI /> },
+    { key: "dashboard", label: "Dashboard", icon: <HomeI />, href: "/dashboard" },
+    { key: "library", label: "Library", icon: <BookI />, href: "/library" },
+    { key: "community", label: "Community", icon: <UsersI />, href: "/community" },
+    { key: "events", label: "Events", icon: <CalI />, href: "/events" },
   ];
 
   // ─── Type badge colors ─────────────────────────────────────
@@ -223,7 +223,7 @@ export default function EventsPage() {
         borderBottom: `1px solid ${c.border}`, transition: "all 0.35s ease",
       }}>
         <div style={{ ...maxW, display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
-          <button style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", color: c.text, ...sans }} aria-label="Home">
+          <button style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", color: c.text, ...sans }} onClick={() => window.location.href="/dashboard"} aria-label="Home">
             <div style={{ width: 32, height: 32, borderRadius: 3, background: c.red, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "#fff" }}>F</div>
             <div style={{ textAlign: "left" }}>
               <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.2 }}>Form & Meaning</div>
@@ -232,7 +232,7 @@ export default function EventsPage() {
           </button>
           <nav className="fm-desk-nav" style={{ display: "flex", alignItems: "center", gap: 2 }}>
             {navLinks.map(link => (
-              <button key={link.key} style={{
+              <button key={link.key} onClick={() => window.location.href=link.href} style={{
                 ...btnGhost, gap: 6,
                 color: link.key === "events" ? c.red : c.textMuted,
                 fontWeight: link.key === "events" ? 700 : 500,
@@ -242,7 +242,7 @@ export default function EventsPage() {
               </button>
             ))}
             <span style={{ width: 1, height: 20, background: c.border, margin: "0 6px" }} />
-            <button style={{ ...btnGhost, padding: "4px 8px" }}><Avatar name={user.name} /></button>
+            <button onClick={() => window.location.href="/profile"} style={{ ...btnGhost, padding: "4px 8px" }}><Avatar name={user.name} /></button>
             <button onClick={toggle} style={{ ...btnGhost, padding: 8 }} aria-label="Toggle theme">{dark ? <Sun /> : <Moon />}</button>
           </nav>
           <div className="fm-mob-toggle" style={{ display: "none", alignItems: "center", gap: 4 }}>
@@ -253,7 +253,7 @@ export default function EventsPage() {
         {menuOpen && (
           <div style={{ position: "fixed", inset: 0, top: 60, zIndex: 99, background: c.bg, padding: "24px", animation: "fadeIn 0.15s ease", display: "flex", flexDirection: "column", gap: 4 }}>
             {navLinks.map(link => (
-              <button key={link.key} onClick={() => setMenuOpen(false)} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12, color: link.key === "events" ? c.red : c.textMuted }}>{link.icon} {link.label}</button>
+              <button key={link.key} onClick={() => { setMenuOpen(false); window.location.href=link.href; }} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12, color: link.key === "events" ? c.red : c.textMuted }}>{link.icon} {link.label}</button>
             ))}
             <div style={{ height: 1, background: c.border, margin: "8px 0" }} />
             <button style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12 }}><UserI s={16} /> Profile</button>

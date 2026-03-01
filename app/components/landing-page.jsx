@@ -178,8 +178,8 @@ export default function LandingPage() {
             <button onClick={() => scrollTo("events")} style={btnGhost}>Events</button>
             <button onClick={() => scrollTo("community")} style={btnGhost}>Community</button>
             <span style={{ width: 1, height: 20, background: c.border, margin: "0 6px" }} />
-            <button style={{ ...btnGhost, color: c.text, fontWeight: 600 }}>Log in</button>
-            <button style={{ ...btnRed, padding: "9px 18px", fontSize: 13 }}>
+            <button onClick={() => window.location.href="/login"} style={{ ...btnGhost, color: c.text, fontWeight: 600 }}>Log in</button>
+            <button onClick={() => window.location.href="/join"} style={{ ...btnRed, padding: "9px 18px", fontSize: 13 }}>
               Join — ₦5,000
             </button>
             <button onClick={toggle} style={{
@@ -215,8 +215,8 @@ export default function LandingPage() {
               }}>{s}</button>
             ))}
             <div style={{ height: 1, background: c.border, margin: "8px 0" }} />
-            <button style={{ ...btnGhost, fontSize: 18, padding: "16px 8px", width: "100%", justifyContent: "flex-start", fontWeight: 600 }}>Log in</button>
-            <button style={{ ...btnRed, width: "100%", justifyContent: "center", marginTop: 8, fontSize: 16, padding: "16px 24px" }}>
+            <button onClick={() => window.location.href="/login"} style={{ ...btnGhost, fontSize: 18, padding: "16px 8px", width: "100%", justifyContent: "flex-start", fontWeight: 600 }}>Log in</button>
+            <button onClick={() => window.location.href="/join"} style={{ ...btnRed, width: "100%", justifyContent: "center", marginTop: 8, fontSize: 16, padding: "16px 24px" }}>
               Join — ₦5,000
             </button>
           </div>
@@ -282,7 +282,7 @@ export default function LandingPage() {
               </p>
 
               <div className="au3 fm-btn-row" style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
-                <button style={btnRed}>
+                <button onClick={() => window.location.href="/join"} style={btnRed}>
                   Join the community <ArrowR s={16} />
                 </button>
                 <button onClick={() => scrollTo("why")} style={btnOutline}>
@@ -502,7 +502,7 @@ export default function LandingPage() {
                 <div style={{ ...serif, fontSize: 24, color: item.color, marginBottom: 14 }}>{item.price}</div>
                 <div style={{ color: c.textMuted, fontSize: 14, lineHeight: 1.65 }}>{item.desc}</div>
                 {item.featured && (
-                  <button style={{ ...btnRed, marginTop: 18, width: "100%", justifyContent: "center", fontSize: 13, padding: "11px 20px" }}>
+                  <button onClick={() => window.location.href="/join"} style={{ ...btnRed, marginTop: 18, width: "100%", justifyContent: "center", fontSize: 13, padding: "11px 20px" }}>
                     Join now <ArrowR s={14} />
                   </button>
                 )}
@@ -547,7 +547,7 @@ export default function LandingPage() {
                     <div style={{ fontSize: 12, color: c.textSoft, marginTop: 2, ...mono }}>{ev.date} · {ev.time}</div>
                   </div>
                 </div>
-                <button style={{ ...btnOutline, padding: "8px 16px", fontSize: 13 }}>
+                <button onClick={() => window.location.href="/join"} style={{ ...btnOutline, padding: "8px 16px", fontSize: 13 }}>
                   Members only
                 </button>
               </div>
@@ -575,7 +575,7 @@ export default function LandingPage() {
                 and the people are honest — you'll feel at home.
               </p>
               <div className="fm-btn-row" style={{ display: "flex", gap: 12, marginTop: 28, flexWrap: "wrap" }}>
-                <button style={btnRed}>Join for ₦5,000 <ArrowR s={16} /></button>
+                <button onClick={() => window.location.href="/join"} style={btnRed}>Join for ₦5,000 <ArrowR s={16} /></button>
                 <button onClick={() => setSubModal(true)} style={btnOutline}>Stay close</button>
               </div>
             </div>
@@ -624,7 +624,7 @@ export default function LandingPage() {
               No applications. One payment. Instant access.
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 28, flexWrap: "wrap" }}>
-              <button style={{ ...btnBase, background: "#fff", color: c.red, fontWeight: 700 }}>
+              <button onClick={() => window.location.href="/join"} style={{ ...btnBase, background: "#fff", color: c.red, fontWeight: 700 }}>
                 Join — ₦5,000 <ArrowR s={16} />
               </button>
               <button onClick={() => setSubModal(true)} style={{ ...btnBase, background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)" }}>
@@ -680,7 +680,14 @@ export default function LandingPage() {
                 <label style={{ fontSize: 12, fontWeight: 600, color: c.textSoft, ...mono, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Email</label>
                 <input type="email" value={subEmail} onChange={e => setSubEmail(e.target.value)} placeholder="you@example.com" style={inputBase} />
               </div>
-              <button onClick={() => { setSubModal(false); showToast("Subscribed — welcome to the list."); setSubName(""); setSubEmail(""); }} style={{ ...btnRed, width: "100%", justifyContent: "center", marginTop: 4 }}>
+              <button onClick={async () => {
+                if (!subEmail.trim()) { showToast("Enter your email."); return; }
+                try {
+                  const res = await fetch("/api/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: subName.trim(), email: subEmail.trim() }) });
+                  if (!res.ok) { const j = await res.json(); showToast(j.error || "Something went wrong."); return; }
+                  setSubModal(false); showToast("Subscribed — welcome to the list."); setSubName(""); setSubEmail("");
+                } catch { showToast("Network error. Try again."); }
+              }} style={{ ...btnRed, width: "100%", justifyContent: "center", marginTop: 4 }}>
                 Subscribe
               </button>
             </div>
