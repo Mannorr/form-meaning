@@ -23,15 +23,24 @@ export default function DashboardPage({ user = {}, announcements: serverAnnounce
     fetch("/api/admin/content").then(r => r.json()).then(d => {
       if (d.data) setContent(d.data.filter(i => i.status === "published"));
     }).catch(() => {});
+    // Fetch user RSVPs and mark events
+    fetch("/api/rsvp").then(r => r.json()).then(d => {
+      if (d.rsvps) setEvents(evs => evs.map(e => ({ ...e, rsvpd: d.rsvps.includes(e.id) })));
+    }).catch(() => {});
   }, []);
 
   // Derive display name
   const displayName = user.name || user.email?.split("@")[0] || "Member";
   const firstName = displayName.split(" ")[0];
 
-  // RSVP toggle
+  // RSVP toggle — calls real API
   const toggleRsvp = async (id) => {
     setEvents(evs => evs.map(e => e.id === id ? { ...e, rsvpd: !e.rsvpd } : e));
+    try {
+      await fetch("/api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event_id: id }) });
+    } catch (e) {
+      setEvents(evs => evs.map(e => e.id === id ? { ...e, rsvpd: !e.rsvpd } : e));
+    }
   };
 
   // Format dates
