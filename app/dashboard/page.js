@@ -37,7 +37,7 @@ export default async function Dashboard() {
   } catch (e) {}
 
   try {
-    const { data } = await supabaseAdmin.from("memberships").select("name, discipline, created_at").eq("status", "active").order("created_at", { ascending: false }).limit(4);
+    const { data } = await supabaseAdmin.from("memberships").select("name, email, discipline, created_at").eq("status", "active").order("created_at", { ascending: false }).limit(4);
     newMembers = data || [];
   } catch (e) {}
 
