@@ -360,20 +360,21 @@ export default function AdminPanel() {
 
 
   const Content = () => {
-    const [form, setForm] = useState({ title: "", speaker: "", type: "conference", day: "", video_url: "", description: "" });
+    const [form, setForm] = useState({ title: "", speaker: "", type: "conference", day: "", video_url: "", file_url: "", format: "PDF", description: "" });
     const [saving, setSaving] = useState(false);
     const [editing, setEditing] = useState(null);
 
     const getYtId = (url) => { const m = (url||"").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^?&]+)/); return m ? m[1] : null; };
     const ytThumb = getYtId(form.video_url);
+    const isResource = form.type === "resource";
 
-    const resetForm = () => { setForm({ title: "", speaker: "", type: "conference", day: "", video_url: "", description: "" }); setEditing(null); setShowAddContent(false); };
+    const resetForm = () => { setForm({ title: "", speaker: "", type: "conference", day: "", video_url: "", file_url: "", format: "PDF", description: "" }); setEditing(null); setShowAddContent(false); };
 
     const saveContent = async (status) => {
       if (!form.title.trim()) return showToast("Title is required.");
       setSaving(true);
       try {
-        const body = { title: form.title, speaker: form.speaker, type: form.type, video_url: form.video_url, description: form.description, status, day: form.day ? parseInt(form.day) : null };
+        const body = { title: form.title, speaker: form.speaker, type: form.type, video_url: form.video_url, file_url: form.file_url, format: form.format, description: form.description, status, day: form.day ? parseInt(form.day) : null };
         const method = editing ? "PATCH" : "POST";
         if (editing) body.id = editing;
         const res = await fetch("/api/admin/content", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -400,7 +401,7 @@ export default function AdminPanel() {
     };
 
     const startEdit = (item) => {
-      setForm({ title: item.title, speaker: item.speaker || "", type: item.type, day: item.day ? String(item.day) : "", video_url: item.video_url || "", description: item.description || "" });
+      setForm({ title: item.title, speaker: item.speaker || "", type: item.type || "conference", day: item.day ? String(item.day) : "", video_url: item.video_url || "", file_url: item.file_url || "", format: item.format || "PDF", description: item.description || "" });
       setEditing(item.id);
       setShowAddContent(true);
     };
@@ -409,48 +410,79 @@ export default function AdminPanel() {
       <div style={{ display: "grid", gap: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <h2 style={{ ...serif, fontSize: 22 }}>Content ({contentItems.length})</h2>
-          <button onClick={() => { resetForm(); setShowAddContent(!showAddContent); }} style={btnRed}><PlusI s={13} /> Add video</button>
+          <button onClick={() => { resetForm(); setShowAddContent(!showAddContent); }} style={btnRed}><PlusI s={13} /> Add content</button>
         </div>
 
         {showAddContent && (
           <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{editing ? "Edit content" : "Add YouTube video"}</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{editing ? "Edit content" : "Add new content"}</h3>
             <div style={{ display: "grid", gap: 12 }}>
 
-              {/* YouTube URL — the star */}
+              {/* Type selector first */}
               <div>
-                <label style={labelStyle}>YouTube URL</label>
-                <input style={inputStyle} placeholder="https://www.youtube.com/watch?v=..." value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
+                <label style={labelStyle}>Content type</label>
+                <select style={{ ...inputStyle, cursor: "pointer" }} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                  <option value="conference">Conference Video</option>
+                  <option value="recording">Recording</option>
+                  <option value="resource">Resource / PDF</option>
+                </select>
               </div>
 
-              {/* Live thumbnail preview */}
-              {ytThumb && (
+              {/* YouTube URL — for videos */}
+              {!isResource && (
+                <div>
+                  <label style={labelStyle}>YouTube URL</label>
+                  <input style={inputStyle} placeholder="https://www.youtube.com/watch?v=..." value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} />
+                </div>
+              )}
+
+              {/* Live thumbnail preview for videos */}
+              {!isResource && ytThumb && (
                 <div style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${c.border}`, maxWidth: 400 }}>
                   <img src={`https://img.youtube.com/vi/${ytThumb}/hqdefault.jpg`} alt="YouTube thumbnail" style={{ width: "100%", display: "block", aspectRatio: "16/9", objectFit: "cover" }} />
-                  <div style={{ padding: "8px 12px", background: c.surface, ...mono, fontSize: 11, color: c.mint }}>✓ Thumbnail detected</div>
+                  <div style={{ padding: "8px 12px", background: c.surface, ...mono, fontSize: 11, color: c.mint }}>\u2713 Thumbnail detected</div>
+                </div>
+              )}
+
+              {/* File URL + Format — for resources */}
+              {isResource && (
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }} className="fm-form-grid">
+                  <div>
+                    <label style={labelStyle}>File URL (Google Drive, Dropbox, etc.)</label>
+                    <input style={inputStyle} placeholder="https://drive.google.com/file/d/..." value={form.file_url} onChange={e => setForm(f => ({ ...f, file_url: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Format</label>
+                    <select style={{ ...inputStyle, cursor: "pointer" }} value={form.format} onChange={e => setForm(f => ({ ...f, format: e.target.value }))}>
+                      <option value="PDF">PDF</option>
+                      <option value="DOC">DOC</option>
+                      <option value="Slides">Slides</option>
+                      <option value="Notion">Notion</option>
+                      <option value="Link">Link</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {isResource && form.file_url && (
+                <div style={{ padding: "10px 14px", borderRadius: 6, background: c.mintSoft, border: `1px solid ${c.mintBorder}`, ...mono, fontSize: 11, color: c.mint }}>
+                  \u2713 File link set \u2014 members will see a download button
                 </div>
               )}
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
-                <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder="e.g. The Problem You Were Hired to Solve" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
-                <div><label style={labelStyle}>Speaker</label><input style={inputStyle} placeholder="e.g. Mannorr" value={form.speaker} onChange={e => setForm(f => ({ ...f, speaker: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder={isResource ? "e.g. Problem-Solving Framework" : "e.g. The Problem You Were Hired to Solve"} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+                <div><label style={labelStyle}>{isResource ? "Author" : "Speaker"}</label><input style={inputStyle} placeholder={isResource ? "e.g. Form & Meaning" : "e.g. Mannorr"} value={form.speaker} onChange={e => setForm(f => ({ ...f, speaker: e.target.value }))} /></div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
-                <div>
-                  <label style={labelStyle}>Type</label>
-                  <select style={{ ...inputStyle, cursor: "pointer" }} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-                    <option value="conference">Conference</option>
-                    <option value="recording">Recording</option>
-                  </select>
-                </div>
-                <div><label style={labelStyle}>Day (conference only)</label><input style={inputStyle} type="number" placeholder="1, 2, 3…" value={form.day} onChange={e => setForm(f => ({ ...f, day: e.target.value }))} /></div>
-              </div>
+              {!isResource && (
+                <div><label style={labelStyle}>Day (conference only)</label><input style={inputStyle} type="number" placeholder="1, 2, 3\u2026" value={form.day} onChange={e => setForm(f => ({ ...f, day: e.target.value }))} /></div>
+              )}
 
-              <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} placeholder="What this video covers…" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+              <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} placeholder={isResource ? "What this resource covers\u2026" : "What this video covers\u2026"} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
 
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => saveContent("published")} disabled={saving} style={btnRed}>{saving ? "Saving…" : editing ? "Update & Publish" : "Publish"}</button>
+                <button onClick={() => saveContent("published")} disabled={saving} style={btnRed}>{saving ? "Saving\u2026" : editing ? "Update & Publish" : "Publish"}</button>
                 <button onClick={() => saveContent("draft")} disabled={saving} style={btnOutline}>{editing ? "Update as Draft" : "Save draft"}</button>
                 <button onClick={resetForm} style={btnGhost}>Cancel</button>
               </div>
@@ -462,15 +494,20 @@ export default function AdminPanel() {
         <div style={{ display: "grid", gap: 10 }}>
           {contentItems.length === 0 && (
             <div style={{ ...cardStyle, padding: 40, textAlign: "center" }}>
-              <p style={{ color: c.textMuted, fontSize: 14 }}>No content yet. Add your first YouTube video above.</p>
+              <p style={{ color: c.textMuted, fontSize: 14 }}>No content yet. Add your first video or resource above.</p>
             </div>
           )}
           {contentItems.map(item => {
             const vid = ((item.video_url||"").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^?&]+)/) || [])[1];
+            const isRes = item.type === "resource";
             return (
               <div key={item.id} style={{ ...cardStyle, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                {/* Thumbnail */}
-                {vid ? (
+                {/* Thumbnail or icon */}
+                {isRes ? (
+                  <div style={{ width: 80, height: 45, borderRadius: 4, background: c.mintSoft, border: `1px solid ${c.mintBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ ...mono, fontSize: 11, fontWeight: 700, color: c.mint }}>{item.format || "PDF"}</span>
+                  </div>
+                ) : vid ? (
                   <div style={{ width: 80, height: 45, borderRadius: 4, overflow: "hidden", flexShrink: 0, background: "#000" }}>
                     <img src={`https://img.youtube.com/vi/${vid}/default.jpg`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
@@ -484,6 +521,7 @@ export default function AdminPanel() {
                   <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
                     <span style={{ ...mono, fontSize: 10, color: c.textSoft, textTransform: "uppercase" }}>{item.type}</span>
                     {item.day && <span style={{ ...mono, fontSize: 10, color: c.red }}>Day {item.day}</span>}
+                    {isRes && item.format && <span style={{ ...mono, fontSize: 10, color: c.mint }}>{item.format}</span>}
                   </div>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{item.title}</div>
                   <div style={{ ...mono, fontSize: 11, color: c.textSoft }}>{item.speaker}</div>
@@ -504,6 +542,7 @@ export default function AdminPanel() {
       </div>
     );
   };
+
 
   const Events = () => {
     const [form, setForm] = useState({ title: "", date: "", time: "", type: "Workshop", host: "", spots: "", description: "" });
