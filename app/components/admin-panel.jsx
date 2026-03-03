@@ -259,64 +259,105 @@ export default function AdminPanel() {
     </div>
   );
 
-  const Members = () => (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ ...serif, fontSize: 22 }}>Members ({members.length})</h2>
-      </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 320 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: c.textSoft }}><SearchI /></span>
-          <input type="text" placeholder="Search name or email…" value={memberSearch} onChange={e => setMemberSearch(e.target.value)} style={{ ...inputStyle, paddingLeft: 36 }} />
+  const Members = () => {
+    const [addMode, setAddMode] = useState(false);
+    const [newEmail, setNewEmail] = useState("");
+    const [newName, setNewName] = useState("");
+    const [addBusy, setAddBusy] = useState(false);
+
+    const addMember = async () => {
+      if (!newEmail.trim()) return showToast("Email is required.");
+      setAddBusy(true);
+      try {
+        // Create membership row
+        const res = await fetch("/api/admin/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: newEmail.trim().toLowerCase(), name: newName.trim(), status: "active", paid: true, admin_approved: true }) });
+        if (!res.ok) { const j = await res.json(); showToast(j.error || "Failed to add."); setAddBusy(false); return; }
+        const { data } = await res.json();
+        // Create auth account with shared password
+        await fetch("/api/admin/setup-passwords-single", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: newEmail.trim().toLowerCase() }) }).catch(() => {});
+        setMembers(ms => [data, ...ms]);
+        setNewEmail(""); setNewName(""); setAddMode(false);
+        showToast("Member added.");
+      } catch (e) { showToast("Error adding member."); }
+      setAddBusy(false);
+    };
+
+    return (
+      <div style={{ display: "grid", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <h2 style={{ ...serif, fontSize: 22 }}>Members ({members.length})</h2>
+          <button onClick={() => setAddMode(!addMode)} style={btnRed}><PlusI s={13} /> Add member</button>
         </div>
-        <div style={{ display: "flex", gap: 3, border: `1px solid ${c.border}`, borderRadius: 4, overflow: "hidden" }}>
-          {["all","active","pending","suspended"].map(f => (
-            <button key={f} onClick={() => setMemberFilter(f)} style={{
-              ...btnGhost, borderRadius: 0, fontSize: 11, padding: "7px 12px",
-              background: memberFilter === f ? c.redSoft : "transparent",
-              color: memberFilter === f ? c.red : c.textSoft,
-              fontWeight: memberFilter === f ? 700 : 500, ...mono, textTransform: "capitalize", border: "none",
-            }}>{f}</button>
-          ))}
-        </div>
-      </div>
-      <div style={{ ...cardStyle, overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${c.border}` }}>
-                {["Name","Email","Discipline","Status","Joined","Actions"].map(h => (
-                  <th key={h} style={{ ...mono, fontSize: 10, fontWeight: 600, color: c.textSoft, textTransform: "uppercase", letterSpacing: "0.06em", padding: "12px 16px", textAlign: "left" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMembers.map(m => (
-                <tr key={m.id} style={{ borderBottom: `1px solid ${c.border}` }}>
-                  <td style={{ padding: "12px 16px", fontWeight: 600 }}>{m.name || m.email?.split("@")[0] || "Member"}</td>
-                  <td style={{ padding: "12px 16px", color: c.textMuted, ...mono, fontSize: 11 }}>{m.email}</td>
-                  <td style={{ padding: "12px 16px", color: c.textMuted }}>{m.discipline || "—"}</td>
-                  <td style={{ padding: "12px 16px" }}><StatusBadge status={m.status} /></td>
-                  <td style={{ padding: "12px 16px", ...mono, fontSize: 11, color: c.textSoft }}>{m.created_at ? new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {m.status === "pending" && <button onClick={() => toggleMemberStatus(m.id, "active")} style={{ ...btnMint, padding: "5px 10px", fontSize: 11 }}>Approve</button>}
-                      {m.status === "active" && <button onClick={() => toggleMemberStatus(m.id, "suspended")} style={{ ...btnGhost, fontSize: 11, color: c.amber }}>Suspend</button>}
-                      {m.status === "suspended" && <button onClick={() => toggleMemberStatus(m.id, "active")} style={{ ...btnGhost, fontSize: 11, color: c.mint }}>Reactivate</button>}
-                      <button onClick={() => removeMember(m.id)} style={{ ...btnGhost, fontSize: 11, color: c.red, padding: "5px 8px" }}><TrashI /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filteredMembers.length === 0 && (
-          <div style={{ padding: 32, textAlign: "center", color: c.textSoft }}>No members found.</div>
+
+        {addMode && (
+          <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>Add new member</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
+                <div><label style={labelStyle}>Email (required)</label><input style={inputStyle} placeholder="member@email.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} /></div>
+                <div><label style={labelStyle}>Name (optional)</label><input style={inputStyle} placeholder="Full name" value={newName} onChange={e => setNewName(e.target.value)} /></div>
+              </div>
+              <p style={{ ...mono, fontSize: 11, color: c.textSoft }}>Password will be set to: formmeaning1!</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={addMember} disabled={addBusy} style={btnRed}>{addBusy ? "Adding..." : "Add member"}</button>
+                <button onClick={() => setAddMode(false)} style={btnGhost}>Cancel</button>
+              </div>
+            </div>
+          </div>
         )}
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 320 }}>
+            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: c.textSoft }}><SearchI /></span>
+            <input type="text" placeholder="Search name or email..." value={memberSearch} onChange={e => setMemberSearch(e.target.value)} style={{ ...inputStyle, paddingLeft: 36 }} />
+          </div>
+          <div style={{ display: "flex", gap: 3, border: `1px solid ${c.border}`, borderRadius: 4, overflow: "hidden" }}>
+            {["all","active","pending","suspended"].map(f => (
+              <button key={f} onClick={() => setMemberFilter(f)} style={{
+                ...btnGhost, borderRadius: 0, fontSize: 11, padding: "7px 12px",
+                background: memberFilter === f ? c.redSoft : "transparent",
+                color: memberFilter === f ? c.red : c.textSoft,
+                fontWeight: memberFilter === f ? 700 : 500, ...mono, textTransform: "capitalize", border: "none",
+              }}>{f}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ ...cardStyle, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${c.border}` }}>
+                  {["Name","Email","Discipline","Status","Joined","Actions"].map(h => (
+                    <th key={h} style={{ ...mono, fontSize: 10, fontWeight: 600, color: c.textSoft, textTransform: "uppercase", letterSpacing: "0.06em", padding: "12px 16px", textAlign: "left" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMembers.map(m => (
+                  <tr key={m.id} style={{ borderBottom: `1px solid ${c.border}` }}>
+                    <td style={{ padding: "12px 16px", fontWeight: 600 }}>{m.name || m.email?.split("@")[0] || "Member"}</td>
+                    <td style={{ padding: "12px 16px", color: c.textMuted, ...mono, fontSize: 11 }}>{m.email}</td>
+                    <td style={{ padding: "12px 16px", color: c.textMuted }}>{m.discipline || "\u2014"}</td>
+                    <td style={{ padding: "12px 16px" }}><StatusBadge status={m.status} /></td>
+                    <td style={{ padding: "12px 16px", ...mono, fontSize: 11, color: c.textSoft }}>{m.created_at ? new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "\u2014"}</td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {m.status === "pending" && <button onClick={() => toggleMemberStatus(m.id, "active")} style={{ ...btnMint, padding: "5px 10px", fontSize: 11 }}>Approve</button>}
+                        {m.status === "active" && <button onClick={() => toggleMemberStatus(m.id, "suspended")} style={{ ...btnGhost, fontSize: 11, color: c.amber }}>Suspend</button>}
+                        {m.status === "suspended" && <button onClick={() => toggleMemberStatus(m.id, "active")} style={{ ...btnGhost, fontSize: 11, color: c.mint }}>Reactivate</button>}
+                        <button onClick={() => removeMember(m.id)} style={{ ...btnGhost, fontSize: 11, color: c.red, padding: "5px 8px" }}><TrashI /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
 
   const Content = () => {
     const [form, setForm] = useState({ title: "", speaker: "", type: "conference", day: "", video_url: "", description: "" });
