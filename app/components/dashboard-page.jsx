@@ -318,10 +318,10 @@ export default function DashboardPage({ user = {}, announcements: serverAnnounce
                 <div style={{ display: "grid", gap: 12 }}>
                   {newMembers.map((m, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Avatar name={m.name || "Member"} size={32} />
+                      <Avatar name={m.name || m.email?.split("@")[0] || "Member"} size={32} />
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{m.name || "New Member"}</div>
-                        <div style={{ ...mono, fontSize: 10, color: c.textSoft }}>{m.discipline || "Designer"}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{m.name || m.email?.split("@")[0] || "Member"}</div>
+                        <div style={{ ...mono, fontSize: 10, color: c.textSoft }}>{m.discipline || m.email || "Creative"}</div>
                       </div>
                     </div>
                   ))}
