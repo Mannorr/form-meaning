@@ -12,6 +12,7 @@ export default function LibraryPage({ content: serverContent = [] }) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [activeVideo, setActiveVideo] = useState(null);
+  const [activeResource, setActiveResource] = useState(null);
   const [content, setContent] = useState(serverContent);
   const dark = theme === "dark";
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
@@ -152,6 +153,41 @@ export default function LibraryPage({ content: serverContent = [] }) {
             <h2 style={{ ...serif, fontSize: 22, lineHeight: 1.2, marginBottom: 4 }}>{video.title}</h2>
             <p style={{ ...mono, fontSize: 12, color: c.textSoft, marginBottom: 10 }}>{video.speaker}</p>
             <p style={{ color: c.textMuted, fontSize: 14, lineHeight: 1.6 }}>{video.description}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── PDF Viewer Modal ──────────────────────────────────────
+  const PDFViewerModal = ({ resource, onClose }) => {
+    return (
+      <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, animation: "fadeIn 0.2s ease" }} role="dialog" aria-modal="true">
+        <div style={{ width: "100%", maxWidth: 900, height: "90vh", borderRadius: 10, background: c.cardBg, border: `1px solid ${c.borderStrong}`, overflow: "hidden", boxShadow: "0 32px 64px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
+          {/* Header */}
+          <div style={{ padding: "16px 24px", borderBottom: `1px solid ${c.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+            <div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
+                {resource.format && <span style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.mintSoft, color: c.mint, border: `1px solid ${c.mintBorder}`, textTransform: "uppercase" }}>{resource.format}</span>}
+                {resource.speaker && <span style={{ ...mono, fontSize: 11, color: c.textSoft }}>{resource.speaker}</span>}
+              </div>
+              <h2 style={{ ...serif, fontSize: 18, lineHeight: 1.2 }}>{resource.title}</h2>
+            </div>
+            <button onClick={onClose} style={{ background: c.surface, border: `1px solid ${c.border}`, color: c.text, cursor: "pointer", padding: 8, borderRadius: 4, flexShrink: 0 }}><XIco /></button>
+          </div>
+          {/* PDF Embed */}
+          <div style={{ flex: 1, background: "#333", position: "relative" }}>
+            {resource.file_url ? (
+              <iframe
+                src={`${resource.file_url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+                style={{ width: "100%", height: "100%", border: "none" }}
+                title={resource.title}
+              />
+            ) : (
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)", ...mono, fontSize: 14 }}>
+                PDF not available yet
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -311,20 +347,34 @@ export default function LibraryPage({ content: serverContent = [] }) {
             </div>
             <div className="fm-res-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
               {resourceItems.map(item => (
-                <div key={item.id} className="fm-card-hover" style={{ ...cardStyle, padding: "22px 24px", borderLeft: `3px solid ${c.border}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {(item.tags || []).map((tag, i) => <span key={i} style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.surface, color: c.textMuted, border: `1px solid ${c.border}`, textTransform: "uppercase" }}>{tag}</span>)}
-                      {item.format && <span style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.surface, color: c.textSoft, border: `1px solid ${c.border}` }}>{item.format}</span>}
+                <div key={item.id} className="fm-card-hover" onClick={() => item.file_url && setActiveResource(item)} style={{ ...cardStyle, overflow: "hidden", cursor: item.file_url ? "pointer" : "default" }}>
+                  {/* Thumbnail */}
+                  {item.thumbnail_url ? (
+                    <div style={{ width: "100%", aspectRatio: "16/10", background: "#f0ebe5", overflow: "hidden" }}>
+                      <img src={item.thumbnail_url} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     </div>
-                  </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>{item.title}</h3>
-                  <p style={{ color: c.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>{item.description}</p>
-                  {item.file_url ? (
-                    <button onClick={() => window.open(item.file_url, "_blank")} style={{ ...btnOutline, padding: "8px 14px", fontSize: 12, gap: 6 }}><DownloadIco /> Download {item.format || ""}</button>
                   ) : (
-                    <span style={{ ...mono, fontSize: 11, color: c.textSoft }}>Coming soon</span>
+                    <div style={{ width: "100%", aspectRatio: "16/10", background: c.surface, display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${c.border}` }}>
+                      <div style={{ textAlign: "center" }}>
+                        <BookIco s={28} />
+                        <div style={{ ...mono, fontSize: 10, color: c.textSoft, marginTop: 6 }}>{item.format || "PDF"}</div>
+                      </div>
+                    </div>
                   )}
+                  <div style={{ padding: "18px 22px" }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                      {(item.tags || []).map((tag, i) => <span key={i} style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.surface, color: c.textMuted, border: `1px solid ${c.border}`, textTransform: "uppercase" }}>{tag}</span>)}
+                      {item.format && <span style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.mintSoft, color: c.mint, border: `1px solid ${c.mintBorder}` }}>{item.format}</span>}
+                    </div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>{item.title}</h3>
+                    {item.speaker && <p style={{ ...mono, fontSize: 11, color: c.textSoft, marginBottom: 6 }}>{item.speaker}</p>}
+                    <p style={{ color: c.textMuted, fontSize: 13, lineHeight: 1.6, marginBottom: 14, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{item.description}</p>
+                    {item.file_url ? (
+                      <span style={{ ...mono, fontSize: 12, color: c.red, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}><BookIco s={13} /> Read now</span>
+                    ) : (
+                      <span style={{ ...mono, fontSize: 11, color: c.textSoft }}>Coming soon</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -343,6 +393,7 @@ export default function LibraryPage({ content: serverContent = [] }) {
       </div>
 
       {activeVideo && <VideoModal video={activeVideo} onClose={() => setActiveVideo(null)} />}
+      {activeResource && <PDFViewerModal resource={activeResource} onClose={() => setActiveResource(null)} />}
 
       <footer style={{ borderTop: `1px solid ${c.border}`, padding: 24, background: c.surface, textAlign: "center" }}>
         <p style={{ ...mono, fontSize: 11, color: c.textSoft }}>Form & Meaning · Design is not decoration. It's a decision. · © 2026</p>
