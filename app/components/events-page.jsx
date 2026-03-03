@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 // FORM & MEANING — EVENTS PAGE
@@ -12,11 +12,37 @@ export default function EventsPage({ upcoming: serverUpcoming = [], past: server
   const [tab, setTab] = useState("upcoming");
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [events, setEvents] = useState(serverUpcoming.map(e => ({ ...e, rsvpd: false })));
-  const pastEvents = serverPast;
+  const [pastEvents, setPastEvents] = useState(serverPast);
   const dark = theme === "dark";
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
-  const toggleRsvp = (id) => setEvents(evs => evs.map(e => e.id === id ? { ...e, rsvpd: !e.rsvpd } : e));
+  // Fetch fresh events + user RSVPs client-side
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/admin/events").then(r => r.json()),
+      fetch("/api/rsvp").then(r => r.json()).catch(() => ({ rsvps: [] }))
+    ]).then(([evData, rsvpData]) => {
+      const rsvpIds = rsvpData.rsvps || [];
+      const today = new Date().toISOString().split("T")[0];
+      if (evData.data) {
+        const upcoming = evData.data.filter(e => e.status === "upcoming" || (e.date && e.date >= today && e.status !== "completed"));
+        const past = evData.data.filter(e => e.status === "completed" || (e.date && e.date < today));
+        setEvents(upcoming.map(e => ({ ...e, rsvpd: rsvpIds.includes(e.id) })));
+        setPastEvents(past);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const toggleRsvp = async (id) => {
+    // Optimistic update
+    setEvents(evs => evs.map(e => e.id === id ? { ...e, rsvpd: !e.rsvpd } : e));
+    try {
+      await fetch("/api/rsvp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event_id: id }) });
+    } catch (e) {
+      // Revert on error
+      setEvents(evs => evs.map(e => e.id === id ? { ...e, rsvpd: !e.rsvpd } : e));
+    }
+  };
   const toggleExpand = (id) => setExpandedEvent(expandedEvent === id ? null : id);
 
   // Format dates
