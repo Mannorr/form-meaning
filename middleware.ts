@@ -5,6 +5,11 @@ export async function middleware(req: any) {
   let res = NextResponse.next();
   const url = req.nextUrl;
 
+  // Skip middleware for API routes — they handle their own auth
+  if (url.pathname.startsWith("/api/")) {
+    return res;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,7 +27,7 @@ export async function middleware(req: any) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Protected member routes — redirect to login if not authenticated
+  // Protected member routes
   const protectedPaths = ["/dashboard", "/library", "/community", "/events", "/profile"];
   const isProtected = protectedPaths.some(p => url.pathname.startsWith(p));
 
@@ -30,7 +35,7 @@ export async function middleware(req: any) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Admin protection — cookie-based
+  // Admin protection
   if (url.pathname.startsWith("/admin") && !url.pathname.startsWith("/admin/login")) {
     const adminToken = req.cookies.get("admin-auth");
     if (!adminToken || adminToken.value !== "true") {
@@ -38,7 +43,7 @@ export async function middleware(req: any) {
     }
   }
 
-  // Redirect logged-in users away from login/join pages
+  // Redirect logged-in users away from login/join
   if (user && (url.pathname === "/login" || url.pathname === "/join")) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
