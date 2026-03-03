@@ -13,7 +13,7 @@ export async function GET() {
     // Get all active members from memberships table
     const { data: members, error } = await supabaseAdmin
       .from("memberships")
-      .select("email, name")
+      .select("email")
       .eq("status", "active");
 
     if (error) {
