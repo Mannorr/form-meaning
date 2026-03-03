@@ -14,18 +14,14 @@ export default function AdminPanel() {
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
   // ─── Mock Data ─────────────────────────────────────────────
-  const [members, setMembers] = useState([
-    { id: 1, name: "Praise Max-Oti", email: "praisemaxoti@gmail.com", discipline: "Brand Design", status: "active", joined: "Feb 19, 2026", paid: true },
-    { id: 2, name: "Joshua Ibiyinka", email: "joshuaibiyinka@gmail.com", discipline: "UI/UX Design", status: "active", joined: "Feb 19, 2026", paid: true },
-    { id: 3, name: "Kosi Okoye", email: "okoyekosi32@gmail.com", discipline: "Motion Design", status: "active", joined: "Feb 19, 2026", paid: true },
-    { id: 4, name: "Samuel Elijah", email: "techelijahsamuel@gmail.com", discipline: "Product Design", status: "active", joined: "Feb 20, 2026", paid: true },
-    { id: 5, name: "Anita Ojone Ogu", email: "anitaojoneogu@gmail.com", discipline: "Visual Design", status: "active", joined: "Feb 20, 2026", paid: true },
-    { id: 6, name: "David Triumph", email: "triumph2026@gmail.com", discipline: "Graphic Design", status: "active", joined: "Feb 21, 2026", paid: true },
-    { id: 7, name: "Kailande Cassamajor", email: "ckailande@gmail.com", discipline: "Brand Identity", status: "active", joined: "Feb 21, 2026", paid: true },
-    { id: 8, name: "Naphtali Ewubajo", email: "naphslens@gmail.com", discipline: "Visual Design", status: "suspended", joined: "Feb 22, 2026", paid: true },
-    { id: 9, name: "Victor Abraham", email: "victormelodyabraham@gmail.com", discipline: "Graphic Design", status: "active", joined: "Feb 25, 2026", paid: true },
-    { id: 10, name: "New Applicant", email: "newperson@gmail.com", discipline: "", status: "pending", joined: "Mar 1, 2026", paid: false },
-  ]);
+  const [members, setMembers] = useState([]);
+
+  // Load real members from API on mount
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  if (!membersLoaded && typeof window !== "undefined") {
+    setMembersLoaded(true);
+    fetch("/api/admin/members").then(r => r.json()).then(d => { if (d.data) setMembers(d.data); }).catch(() => {});
+  }
 
   const [contentItems, setContentItems] = useState([]);
 
@@ -36,12 +32,14 @@ export default function AdminPanel() {
     fetch("/api/admin/content").then(r => r.json()).then(d => { if (d.data) setContentItems(d.data); }).catch(() => {});
   }
 
-  const [eventItems, setEventItems] = useState([
-    { id: 1, title: "Designing with Intention", date: "Mar 14, 2026", type: "Workshop", host: "Mannorr", rsvps: 7, spots: 12, status: "upcoming" },
-    { id: 2, title: "The Brief Behind the Brief", date: "Mar 21, 2026", type: "Q&A", host: "Community", rsvps: 14, spots: null, status: "upcoming" },
-    { id: 3, title: "Portfolio as Proof", date: "Apr 4, 2026", type: "Masterclass", host: "Dexios", rsvps: 5, spots: 8, status: "upcoming" },
-    { id: 4, title: "Questions & Answers", date: "Feb 27, 2026", type: "Q&A", host: "Community", rsvps: 18, spots: null, status: "completed" },
-  ]);
+  const [eventItems, setEventItems] = useState([]);
+
+  // Load real events from API on mount
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+  if (!eventsLoaded && typeof window !== "undefined") {
+    setEventsLoaded(true);
+    fetch("/api/admin/events").then(r => r.json()).then(d => { if (d.data) setEventItems(d.data); }).catch(() => {});
+  }
 
   const [announcementItems, setAnnouncementItems] = useState([]);
 
@@ -63,19 +61,26 @@ export default function AdminPanel() {
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2400); };
 
   const filteredMembers = members.filter(m => {
-    const matchSearch = !memberSearch.trim() || m.name.toLowerCase().includes(memberSearch.toLowerCase()) || m.email.toLowerCase().includes(memberSearch.toLowerCase());
+    const matchSearch = !memberSearch.trim() || (m.name || "").toLowerCase().includes(memberSearch.toLowerCase()) || (m.email || "").toLowerCase().includes(memberSearch.toLowerCase());
     const matchFilter = memberFilter === "all" || m.status === memberFilter;
     return matchSearch && matchFilter;
   });
 
-  const toggleMemberStatus = (id, newStatus) => {
-    setMembers(ms => ms.map(m => m.id === id ? { ...m, status: newStatus } : m));
-    showToast(`Member ${newStatus === "active" ? "activated" : newStatus === "suspended" ? "suspended" : "updated"}.`);
+  const toggleMemberStatus = async (id, newStatus) => {
+    try {
+      await fetch("/api/admin/members", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: newStatus }) });
+      setMembers(ms => ms.map(m => m.id === id ? { ...m, status: newStatus } : m));
+      showToast(`Member ${newStatus === "active" ? "activated" : newStatus === "suspended" ? "suspended" : "updated"}.`);
+    } catch (e) { showToast("Error updating member."); }
   };
 
-  const removeMember = (id) => {
-    setMembers(ms => ms.filter(m => m.id !== id));
-    showToast("Member removed.");
+  const removeMember = async (id) => {
+    if (!confirm("Remove this member? This cannot be undone.")) return;
+    try {
+      await fetch("/api/admin/members", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      setMembers(ms => ms.filter(m => m.id !== id));
+      showToast("Member removed.");
+    } catch (e) { showToast("Error removing member."); }
   };
 
   const toggleContentStatus = async (id) => {
@@ -288,11 +293,11 @@ export default function AdminPanel() {
             <tbody>
               {filteredMembers.map(m => (
                 <tr key={m.id} style={{ borderBottom: `1px solid ${c.border}` }}>
-                  <td style={{ padding: "12px 16px", fontWeight: 600 }}>{m.name}</td>
+                  <td style={{ padding: "12px 16px", fontWeight: 600 }}>{m.name || m.email?.split("@")[0] || "Member"}</td>
                   <td style={{ padding: "12px 16px", color: c.textMuted, ...mono, fontSize: 11 }}>{m.email}</td>
                   <td style={{ padding: "12px 16px", color: c.textMuted }}>{m.discipline || "—"}</td>
                   <td style={{ padding: "12px 16px" }}><StatusBadge status={m.status} /></td>
-                  <td style={{ padding: "12px 16px", ...mono, fontSize: 11, color: c.textSoft }}>{m.joined}</td>
+                  <td style={{ padding: "12px 16px", ...mono, fontSize: 11, color: c.textSoft }}>{m.created_at ? new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: 4 }}>
                       {m.status === "pending" && <button onClick={() => toggleMemberStatus(m.id, "active")} style={{ ...btnMint, padding: "5px 10px", fontSize: 11 }}>Approve</button>}
@@ -459,54 +464,119 @@ export default function AdminPanel() {
     );
   };
 
-  const Events = () => (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <h2 style={{ ...serif, fontSize: 22 }}>Events ({eventItems.length})</h2>
-        <button onClick={() => setShowAddEvent(!showAddEvent)} style={btnRed}><PlusI s={13} /> Create event</button>
-      </div>
-      {showAddEvent && (
-        <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>New event</h3>
-          <div style={{ display: "grid", gap: 12 }}>
-            <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder="Event title" /></div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }} className="fm-form-grid">
-              <div><label style={labelStyle}>Date</label><input style={inputStyle} type="date" /></div>
-              <div><label style={labelStyle}>Time</label><input style={inputStyle} placeholder="6:00 PM WAT" /></div>
-              <div>
-                <label style={labelStyle}>Type</label>
-                <select style={{ ...inputStyle, cursor: "pointer" }}><option>Workshop</option><option>Q&A</option><option>Masterclass</option></select>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
-              <div><label style={labelStyle}>Host</label><input style={inputStyle} placeholder="Who's running this" /></div>
-              <div><label style={labelStyle}>Max spots (leave empty for unlimited)</label><input style={inputStyle} type="number" placeholder="e.g. 12" /></div>
-            </div>
-            <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} placeholder="What this event covers…" /></div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setShowAddEvent(false); showToast("Event created."); }} style={btnRed}>Create event</button>
-              <button onClick={() => setShowAddEvent(false)} style={btnGhost}>Cancel</button>
-            </div>
-          </div>
+  const Events = () => {
+    const [form, setForm] = useState({ title: "", date: "", time: "", type: "Workshop", host: "", spots: "", description: "" });
+    const [saving, setSaving] = useState(false);
+    const [editing, setEditing] = useState(null);
+
+    const resetForm = () => { setForm({ title: "", date: "", time: "", type: "Workshop", host: "", spots: "", description: "" }); setEditing(null); setShowAddEvent(false); };
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+
+    const saveEvent = async (status) => {
+      if (!form.title.trim()) return showToast("Title is required.");
+      setSaving(true);
+      try {
+        const body = { title: form.title, date: form.date || null, time: form.time, type: form.type, host: form.host, spots: form.spots ? parseInt(form.spots) : null, description: form.description, status };
+        const method = editing ? "PATCH" : "POST";
+        if (editing) body.id = editing;
+        const res = await fetch("/api/admin/events", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!res.ok) throw new Error("Failed");
+        const { data } = await res.json();
+        if (editing) { setEventItems(items => items.map(i => i.id === editing ? data : i)); }
+        else { setEventItems(items => [data, ...items]); }
+        resetForm();
+        showToast(editing ? "Event updated." : "Event created.");
+      } catch (e) { showToast("Error saving. Try again."); }
+      setSaving(false);
+    };
+
+    const deleteEvent = async (id) => {
+      if (!confirm("Delete this event?")) return;
+      try {
+        await fetch("/api/admin/events", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+        setEventItems(items => items.filter(i => i.id !== id));
+        showToast("Event deleted.");
+      } catch (e) { showToast("Error deleting."); }
+    };
+
+    const markCompleted = async (id) => {
+      try {
+        await fetch("/api/admin/events", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "completed" }) });
+        setEventItems(items => items.map(i => i.id === id ? { ...i, status: "completed" } : i));
+        showToast("Event marked completed.");
+      } catch (e) { showToast("Error updating."); }
+    };
+
+    const startEdit = (item) => {
+      setForm({ title: item.title, date: item.date || "", time: item.time || "", type: item.type || "Workshop", host: item.host || "", spots: item.spots ? String(item.spots) : "", description: item.description || "" });
+      setEditing(item.id);
+      setShowAddEvent(true);
+    };
+
+    return (
+      <div style={{ display: "grid", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <h2 style={{ ...serif, fontSize: 22 }}>Events ({eventItems.length})</h2>
+          <button onClick={() => { resetForm(); setShowAddEvent(!showAddEvent); }} style={btnRed}><PlusI s={13} /> Create event</button>
         </div>
-      )}
-      <div style={{ display: "grid", gap: 10 }}>
-        {eventItems.map(ev => (
-          <div key={ev.id} style={{ ...cardStyle, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-                <span style={{ ...mono, fontSize: 10, color: c.textSoft, textTransform: "uppercase" }}>{ev.type}</span>
-                <span style={{ ...mono, fontSize: 10, color: c.textSoft }}>{ev.date}</span>
+
+        {showAddEvent && (
+          <div style={{ ...cardStyle, padding: 22, borderColor: c.redBorder, animation: "fadeIn 0.2s ease" }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{editing ? "Edit event" : "New event"}</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div><label style={labelStyle}>Title</label><input style={inputStyle} placeholder="Event title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }} className="fm-form-grid">
+                <div><label style={labelStyle}>Date</label><input style={inputStyle} type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Time</label><input style={inputStyle} placeholder="6:00 PM WAT" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} /></div>
+                <div>
+                  <label style={labelStyle}>Type</label>
+                  <select style={{ ...inputStyle, cursor: "pointer" }} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+                    <option value="Workshop">Workshop</option><option value="Q&A">Q&A</option><option value="Masterclass">Masterclass</option>
+                  </select>
+                </div>
               </div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{ev.title}</div>
-              <div style={{ ...mono, fontSize: 11, color: c.textSoft }}>{ev.host} · {ev.rsvps} RSVPs{ev.spots ? ` / ${ev.spots} spots` : ""}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }} className="fm-form-grid">
+                <div><label style={labelStyle}>Host</label><input style={inputStyle} placeholder="Who's running this" value={form.host} onChange={e => setForm(f => ({ ...f, host: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Max spots (empty = unlimited)</label><input style={inputStyle} type="number" placeholder="e.g. 12" value={form.spots} onChange={e => setForm(f => ({ ...f, spots: e.target.value }))} /></div>
+              </div>
+              <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} placeholder="What this event covers..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => saveEvent("upcoming")} disabled={saving} style={btnRed}>{saving ? "Saving..." : editing ? "Update" : "Create event"}</button>
+                <button onClick={resetForm} style={btnGhost}>Cancel</button>
+              </div>
             </div>
-            <StatusBadge status={ev.status} />
           </div>
-        ))}
+        )}
+
+        <div style={{ display: "grid", gap: 10 }}>
+          {eventItems.length === 0 && (
+            <div style={{ ...cardStyle, padding: 40, textAlign: "center" }}>
+              <p style={{ color: c.textMuted, fontSize: 14 }}>No events yet. Create your first one above.</p>
+            </div>
+          )}
+          {eventItems.map(ev => (
+            <div key={ev.id} style={{ ...cardStyle, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
+                  <span style={{ ...mono, fontSize: 10, color: c.textSoft, textTransform: "uppercase" }}>{ev.type}</span>
+                  <span style={{ ...mono, fontSize: 10, color: c.textSoft }}>{fmtDate(ev.date)}</span>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{ev.title}</div>
+                <div style={{ ...mono, fontSize: 11, color: c.textSoft }}>{ev.host}{ev.spots ? ` \u00b7 ${ev.spots} spots` : ""}</div>
+              </div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                <StatusBadge status={ev.status} />
+                <button onClick={() => startEdit(ev)} style={{ ...btnGhost, fontSize: 11 }}>Edit</button>
+                {ev.status !== "completed" && <button onClick={() => markCompleted(ev.id)} style={{ ...btnGhost, fontSize: 11, color: c.mint }}>Complete</button>}
+                <button onClick={() => deleteEvent(ev.id)} style={{ ...btnGhost, fontSize: 11, color: c.red }}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
 
   const Announcements = () => {
     const [form, setForm] = useState({ title: "", body: "", pinned: false });
