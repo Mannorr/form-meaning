@@ -562,6 +562,7 @@ export default function AdminPanel() {
 
     const saveEvent = async (status) => {
       if (!form.title.trim()) return showToast("Title is required.");
+      if (!form.date) return showToast("Date is required.");
       setSaving(true);
       try {
         const body = { title: form.title, date: form.date || null, time: form.time, type: form.type, host: form.host, spots: form.spots ? parseInt(form.spots) : null, description: form.description, status };
@@ -619,7 +620,7 @@ export default function AdminPanel() {
                 <div>
                   <label style={labelStyle}>Type</label>
                   <select style={{ ...inputStyle, cursor: "pointer" }} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-                    <option value="Workshop">Workshop</option><option value="Q&A">Q&A</option><option value="Masterclass">Masterclass</option>
+                    <option value="Workshop">Workshop</option><option value="Q&A">Q&amp;A</option><option value="Masterclass">Masterclass</option><option value="Conference">Conference</option>
                   </select>
                 </div>
               </div>
