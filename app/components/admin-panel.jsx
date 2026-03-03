@@ -360,7 +360,7 @@ export default function AdminPanel() {
 
 
   const Content = () => {
-    const [form, setForm] = useState({ title: "", speaker: "", type: "conference", day: "", video_url: "", file_url: "", format: "PDF", description: "" });
+    const [form, setForm] = useState({ title: "", speaker: "", type: "conference", day: "", video_url: "", file_url: "", format: "PDF", thumbnail_url: "", description: "" });
     const [saving, setSaving] = useState(false);
     const [editing, setEditing] = useState(null);
 
@@ -368,13 +368,13 @@ export default function AdminPanel() {
     const ytThumb = getYtId(form.video_url);
     const isResource = form.type === "resource";
 
-    const resetForm = () => { setForm({ title: "", speaker: "", type: "conference", day: "", video_url: "", file_url: "", format: "PDF", description: "" }); setEditing(null); setShowAddContent(false); };
+    const resetForm = () => { setForm({ title: "", speaker: "", type: "conference", day: "", video_url: "", file_url: "", format: "PDF", thumbnail_url: "", description: "" }); setEditing(null); setShowAddContent(false); };
 
     const saveContent = async (status) => {
       if (!form.title.trim()) return showToast("Title is required.");
       setSaving(true);
       try {
-        const body = { title: form.title, speaker: form.speaker, type: form.type, video_url: form.video_url, file_url: form.file_url, format: form.format, description: form.description, status, day: form.day ? parseInt(form.day) : null };
+        const body = { title: form.title, speaker: form.speaker, type: form.type, video_url: form.video_url, file_url: form.file_url, format: form.format, thumbnail_url: form.thumbnail_url, description: form.description, status, day: form.day ? parseInt(form.day) : null };
         const method = editing ? "PATCH" : "POST";
         if (editing) body.id = editing;
         const res = await fetch("/api/admin/content", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -401,7 +401,7 @@ export default function AdminPanel() {
     };
 
     const startEdit = (item) => {
-      setForm({ title: item.title, speaker: item.speaker || "", type: item.type || "conference", day: item.day ? String(item.day) : "", video_url: item.video_url || "", file_url: item.file_url || "", format: item.format || "PDF", description: item.description || "" });
+      setForm({ title: item.title, speaker: item.speaker || "", type: item.type || "conference", day: item.day ? String(item.day) : "", video_url: item.video_url || "", file_url: item.file_url || "", format: item.format || "PDF", thumbnail_url: item.thumbnail_url || "", description: item.description || "" });
       setEditing(item.id);
       setShowAddContent(true);
     };
@@ -466,7 +466,15 @@ export default function AdminPanel() {
 
               {isResource && form.file_url && (
                 <div style={{ padding: "10px 14px", borderRadius: 6, background: c.mintSoft, border: `1px solid ${c.mintBorder}`, ...mono, fontSize: 11, color: c.mint }}>
-                  \u2713 File link set \u2014 members will see a download button
+                  \u2713 File link set \u2014 members will see it in the PDF viewer
+                </div>
+              )}
+
+              {/* Thumbnail URL — for resources */}
+              {isResource && (
+                <div>
+                  <label style={labelStyle}>Thumbnail URL (optional \u2014 cover image for the card)</label>
+                  <input style={inputStyle} placeholder="https://your-supabase-url.storage/.../thumbnail.jpg" value={form.thumbnail_url} onChange={e => setForm(f => ({ ...f, thumbnail_url: e.target.value }))} />
                 </div>
               )}
 
