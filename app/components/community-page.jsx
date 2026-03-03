@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 // FORM & MEANING — COMMUNITY DIRECTORY
@@ -16,7 +16,13 @@ export default function CommunityPage({ members: serverMembers = [] }) {
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
   // Use real data
-  const members = serverMembers;
+  const [members, setMembers] = useState(serverMembers);
+
+  useEffect(() => {
+    fetch("/api/admin/members").then(r => r.json()).then(d => {
+      if (d.data) setMembers(d.data.filter(m => m.status === "active"));
+    }).catch(() => {});
+  }, []);
   const disciplines = ["All", ...new Set(members.map(m => m.discipline).filter(Boolean))].sort();
 
   const filtered = members.filter(m => {
@@ -180,10 +186,10 @@ export default function CommunityPage({ members: serverMembers = [] }) {
                 ...cardStyle, padding: "20px 22px", cursor: "pointer",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <Avatar name={m.name || "Member"} size={44} />
+                  <Avatar name={m.name || m.email?.split("@")[0] || "Member"} size={44} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{m.name || "Member"}</div>
-                    <div style={{ ...mono, fontSize: 11, color: c.textSoft, marginTop: 1 }}>{m.discipline || "Designer"}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{m.name || m.email?.split("@")[0] || "Member"}</div>
+                    <div style={{ ...mono, fontSize: 11, color: c.textSoft, marginTop: 1 }}>{m.discipline || m.email || "Creative"}</div>
                   </div>
                   <span style={{ color: c.textSoft, transform: expandedMember === m.id ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}><ChevIco /></span>
                 </div>
