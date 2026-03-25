@@ -19,7 +19,7 @@ export default function LibraryPage({ content: serverContent = [] }) {
 
   // Client-side fetch to always get fresh data
   useEffect(() => {
-    fetch("/api/admin/content")
+    fetch("/api/member/content")
       .then(r => r.json())
       .then(d => {
         if (d.data) setContent(d.data.filter(i => i.status === "published"));
@@ -161,38 +161,91 @@ export default function LibraryPage({ content: serverContent = [] }) {
 
   // ─── PDF Viewer Modal ──────────────────────────────────────
   const PDFViewerModal = ({ resource, onClose }) => {
+    const isMobile = typeof window !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // Convert Google Drive share URLs to embeddable preview URLs
+    const getEmbedUrl = (url) => {
+      if (!url) return null;
+      const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+      if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+      const openMatch = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+      if (openMatch) return `https://drive.google.com/file/d/${openMatch[1]}/preview`;
+      if (url.includes("dropbox.com")) return url.replace("dl=1", "dl=0");
+      if (url.endsWith(".pdf") || url.includes(".pdf?")) {
+        return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+      }
+      return url;
+    };
+
+    const embedUrl = getEmbedUrl(resource.file_url);
+
     return (
-      <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, animation: "fadeIn 0.2s ease" }} role="dialog" aria-modal="true">
-        <div style={{ width: "100%", maxWidth: 900, height: "90vh", borderRadius: 10, background: c.cardBg, border: `1px solid ${c.borderStrong}`, overflow: "hidden", boxShadow: "0 32px 64px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
+      <div
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+        style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 0 : 20, animation: "fadeIn 0.2s ease" }}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 900, height: isMobile ? "100dvh" : "90vh", borderRadius: isMobile ? 0 : 10, background: c.cardBg, border: isMobile ? "none" : `1px solid ${c.borderStrong}`, overflow: "hidden", boxShadow: "0 32px 64px rgba(0,0,0,0.5)", display: "flex", flexDirection: "column" }}>
+
           {/* Header */}
-          <div style={{ padding: "16px 24px", borderBottom: `1px solid ${c.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-            <div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
+          <div style={{ padding: "14px 18px", borderBottom: `1px solid ${c.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3, flexWrap: "wrap" }}>
                 {resource.format && <span style={{ ...mono, fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 3, background: c.mintSoft, color: c.mint, border: `1px solid ${c.mintBorder}`, textTransform: "uppercase" }}>{resource.format}</span>}
                 {resource.speaker && <span style={{ ...mono, fontSize: 11, color: c.textSoft }}>{resource.speaker}</span>}
               </div>
-              <h2 style={{ ...serif, fontSize: 18, lineHeight: 1.2 }}>{resource.title}</h2>
+              <h2 style={{ ...serif, fontSize: isMobile ? 15 : 18, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{resource.title}</h2>
             </div>
-            <button onClick={onClose} style={{ background: c.surface, border: `1px solid ${c.border}`, color: c.text, cursor: "pointer", padding: 8, borderRadius: 4, flexShrink: 0 }}><XIco /></button>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
+              {resource.file_url && (
+                <a href={resource.file_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer", background: c.red, color: "#fff", textDecoration: "none", fontFamily: "'Syne', sans-serif" }}>
+                  <DownloadIco s={13} /> {isMobile ? "Open" : "Open in browser"}
+                </a>
+              )}
+              <button onClick={onClose} style={{ background: c.surface, border: `1px solid ${c.border}`, color: c.text, cursor: "pointer", padding: 8, borderRadius: 4, flexShrink: 0 }}><XIco /></button>
+            </div>
           </div>
-          {/* PDF Embed */}
-          <div style={{ flex: 1, background: "#333", position: "relative" }}>
-            {resource.file_url ? (
+
+          {/* PDF content area */}
+          <div style={{ flex: 1, background: "#2a2a2a", position: "relative", overflow: "hidden" }}>
+            {!resource.file_url ? (
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: "rgba(255,255,255,0.4)", fontFamily: "monospace", fontSize: 14 }}>
+                <BookIco s={32} />
+                <span>PDF not available yet</span>
+              </div>
+            ) : isMobile ? (
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20, padding: 32, textAlign: "center" }}>
+                <div style={{ width: 72, height: 72, borderRadius: 12, background: c.mintSoft, border: `1px solid ${c.mintBorder}`, display: "flex", alignItems: "center", justifyContent: "center", color: c.mint }}>
+                  <BookIco s={32} />
+                </div>
+                <div>
+                  <p style={{ color: "rgba(255,255,255,0.9)", fontWeight: 700, fontSize: 16, marginBottom: 8, fontFamily: "'Syne', sans-serif" }}>{resource.title}</p>
+                  <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 1.6, marginBottom: 24, fontFamily: "'Syne', sans-serif" }}>
+                    PDFs open best in your browser on mobile. Tap below to read.
+                  </p>
+                  <a href={resource.file_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 28px", borderRadius: 6, fontSize: 15, fontWeight: 600, background: c.red, color: "#fff", textDecoration: "none", fontFamily: "'Syne', sans-serif" }}>
+                    <DownloadIco s={16} /> Open PDF
+                  </a>
+                </div>
+                {resource.description && (
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, lineHeight: 1.6, maxWidth: 320, fontFamily: "'Syne', sans-serif" }}>{resource.description}</p>
+                )}
+              </div>
+            ) : (
               <iframe
-                src={`${resource.file_url}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+                src={embedUrl}
                 style={{ width: "100%", height: "100%", border: "none" }}
                 title={resource.title}
+                allow="autoplay"
               />
-            ) : (
-              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)", ...mono, fontSize: 14 }}>
-                PDF not available yet
-              </div>
             )}
           </div>
         </div>
       </div>
     );
   };
+
 
   // ═══════════════════════════════════════════════════════════
   return (
