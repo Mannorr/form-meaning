@@ -21,8 +21,8 @@ export default function CommunityPage({ members: serverMembers = [] }) {
   const [members, setMembers] = useState(serverMembers);
 
   useEffect(() => {
-    fetch("/api/admin/members").then(r => r.json()).then(d => {
-      if (d.data) setMembers(d.data.filter(m => m.status === "active"));
+    fetch("/api/member/members").then(r => r.json()).then(d => {
+      if (d.data) setMembers(d.data);
     }).catch(() => {});
   }, []);
   const disciplines = ["All", ...new Set(members.map(m => m.discipline).filter(Boolean))].sort();
