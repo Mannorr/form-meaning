@@ -15,15 +15,15 @@ export default function DashboardPage({ user = {}, announcements: serverAnnounce
   const dark = theme === "dark";
   const toggle = () => setTheme(t => t === "dark" ? "light" : "dark");
 
-  // Client-side fetch for fresh data
+  // Client-side refresh using member-scoped routes (not admin routes)
   useEffect(() => {
-    fetch("/api/admin/announcements").then(r => r.json()).then(d => {
-      if (d.data) setAnnouncements(d.data.filter(a => a.status === "published"));
+    fetch("/api/member/announcements").then(r => r.json()).then(d => {
+      if (d.data) setAnnouncements(d.data);
     }).catch(() => {});
-    fetch("/api/admin/content").then(r => r.json()).then(d => {
-      if (d.data) setContent(d.data.filter(i => i.status === "published"));
+    fetch("/api/member/content").then(r => r.json()).then(d => {
+      if (d.data) setContent(d.data);
     }).catch(() => {});
-    // Fetch user RSVPs and mark events
+    // Fetch this member's RSVPs and mark events accordingly
     fetch("/api/rsvp").then(r => r.json()).then(d => {
       if (d.rsvps) setEvents(evs => evs.map(e => ({ ...e, rsvpd: d.rsvps.includes(e.id) })));
     }).catch(() => {});
