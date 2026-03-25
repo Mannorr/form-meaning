@@ -28,34 +28,59 @@ export async function POST(req) {
         email,
         name,
         paid: true,
+        paid_at: new Date().toISOString(),
+        payment_provider: "selar",
         status: "active",
         admin_approved: true,
+        approved_at: new Date().toISOString(),
       }]);
     } else {
-      await supabaseAdmin.from("memberships").update({ paid: true, status: "active", admin_approved: true }).eq("email", email);
+      await supabaseAdmin.from("memberships").update({
+        paid: true,
+        paid_at: new Date().toISOString(),
+        payment_provider: "selar",
+        status: "active",
+        admin_approved: true,
+        approved_at: new Date().toISOString(),
+      }).eq("email", email);
     }
 
     // Generate a temporary password and create Supabase auth account
     const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
     let isNewUser = true;
-    
+    let authUserId = null;
+
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: tempPassword,
       email_confirm: true,
     });
 
-    // If user already exists, update their password so they can still log in
+    // If user already exists, find them and update their password
     if (authError && authError.message.includes("already")) {
       isNewUser = false;
-      // Find the existing user and update their password
       const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = users?.find(u => u.email === email);
-      if (existingUser) {
-        await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: tempPassword });
+      const existingAuthUser = users?.find(u => u.email?.toLowerCase() === email);
+      if (existingAuthUser) {
+        authUserId = existingAuthUser.id;
+        await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, { password: tempPassword });
       }
     } else if (authError) {
       console.error("Auth create error:", authError.message);
+    } else {
+      authUserId = authUser?.user?.id;
+    }
+
+    // ── Link user_id back to membership row ───────────────────
+    // Critical: without this, RLS policies block member access
+    if (authUserId) {
+      await supabaseAdmin
+        .from("memberships")
+        .update({ user_id: authUserId })
+        .eq("email", email);
+      console.log(`Linked user_id ${authUserId} to membership for ${email}`);
+    } else {
+      console.error(`Could not link user_id for ${email}`);
     }
 
     // Send welcome email with login credentials
