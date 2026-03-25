@@ -14,7 +14,22 @@ export async function POST(req) {
   );
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return NextResponse.json({ error: error.message }, { status: 401 });
+  if (error) return NextResponse.json({ error: "Incorrect email or password. Try again or reset your password." }, { status: 401 });
   if (!data?.session) return NextResponse.json({ error: "No session returned." }, { status: 401 });
+
+  // Self-healing: link user_id to membership row if not already linked.
+  // This fixes any member whose user_id was never set (e.g. bulk imports).
+  try {
+    const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
+    await supabaseAdmin
+      .from("memberships")
+      .update({ user_id: data.user.id })
+      .eq("email", email.trim().toLowerCase())
+      .is("user_id", null); // only update if still null — avoids unnecessary writes
+  } catch (e) {
+    console.error("user_id link failed:", e.message);
+    // Non-fatal — login still succeeds
+  }
+
   return NextResponse.json({ ok: true });
 }
