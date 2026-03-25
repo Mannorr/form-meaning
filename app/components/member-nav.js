@@ -17,7 +17,6 @@ export default function MemberNav({ user }) {
   const initials = (user?.name || user?.email || "U").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   async function handleLogout() {
-    await fetch("/api/admin/logout", { method: "POST" });
     const { supabase } = await import("@/lib/supabase");
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -38,11 +37,11 @@ export default function MemberNav({ user }) {
           </div>
         </Link>
 
-        {/* Desktop nav */}
         <nav style={{ display: "flex", alignItems: "center", gap: 2 }} className="fm-desk-nav">
           {links.map(link => (
             <Link key={link.href} href={link.href} style={{
-              padding: "8px 12px", borderRadius: 4, fontSize: 13, fontWeight: pathname === link.href ? 700 : 500,
+              padding: "8px 12px", borderRadius: 4, fontSize: 13,
+              fontWeight: pathname === link.href ? 700 : 500,
               color: pathname === link.href ? "#D42B22" : "rgba(26,26,26,0.6)",
               textDecoration: "none", transition: "all 0.15s ease",
             }}>{link.label}</Link>
@@ -52,11 +51,11 @@ export default function MemberNav({ user }) {
             width: 32, height: 32, borderRadius: "50%", background: "#D42B22",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 12, fontWeight: 700, color: "#fff", textDecoration: "none",
-            boxShadow: pathname === "/profile" ? "0 0 0 2px #D42B22" : "none",
+            outline: pathname === "/profile" ? "2px solid #D42B22" : "none",
+            outlineOffset: 2,
           }}>{initials}</Link>
         </nav>
 
-        {/* Mobile toggle */}
         <button onClick={() => setMenuOpen(!menuOpen)} className="fm-mob-toggle" style={{
           display: "none", background: "none", border: "none", cursor: "pointer", padding: 8, color: "#1A1A1A",
         }}>
@@ -66,12 +65,12 @@ export default function MemberNav({ user }) {
         </button>
       </div>
 
-      {/* Mobile menu */}
       {menuOpen && (
         <div style={{ position: "fixed", inset: 0, top: 60, zIndex: 99, background: "#F5F0EB", padding: 24, display: "flex", flexDirection: "column", gap: 4 }}>
           {links.map(link => (
             <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)} style={{
-              padding: "16px 8px", fontSize: 17, color: pathname === link.href ? "#D42B22" : "rgba(26,26,26,0.6)",
+              padding: "16px 8px", fontSize: 17,
+              color: pathname === link.href ? "#D42B22" : "rgba(26,26,26,0.6)",
               fontWeight: pathname === link.href ? 700 : 500, textDecoration: "none",
             }}>{link.label}</Link>
           ))}
