@@ -21,16 +21,12 @@ export default function EventsPage({ upcoming: serverUpcoming = [], past: server
   // Fetch fresh events + user RSVPs client-side
   useEffect(() => {
     Promise.all([
-      fetch("/api/admin/events").then(r => r.json()),
+      fetch("/api/member/events").then(r => r.json()).catch(() => ({ data: [] })),
       fetch("/api/rsvp").then(r => r.json()).catch(() => ({ rsvps: [] }))
     ]).then(([evData, rsvpData]) => {
       const rsvpIds = rsvpData.rsvps || [];
-      const today = new Date().toISOString().split("T")[0];
       if (evData.data) {
-        const upcoming = evData.data.filter(e => e.status === "upcoming" || (e.date && e.date >= today && e.status !== "completed"));
-        const past = evData.data.filter(e => e.status === "completed" || (e.date && e.date < today));
-        setEvents(upcoming.map(e => ({ ...e, rsvpd: rsvpIds.includes(e.id) })));
-        setPastEvents(past);
+        setEvents(evData.data.map(e => ({ ...e, rsvpd: rsvpIds.includes(e.id) })));
       }
     }).catch(() => {});
   }, []);
