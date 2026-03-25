@@ -8,18 +8,32 @@ export async function POST(req) {
   const password = "formmeaning1!";
 
   try {
-    const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+    let authUserId = null;
+
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
     });
 
     if (createError && createError.message.includes("already")) {
+      // User exists — find them and update password
       const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-      const existing = users?.find(u => u.email === email);
+      const existing = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
       if (existing) {
+        authUserId = existing.id;
         await supabaseAdmin.auth.admin.updateUserById(existing.id, { password });
       }
+    } else if (!createError) {
+      authUserId = newUser?.user?.id;
+    }
+
+    // Link user_id back to the membership row
+    if (authUserId) {
+      await supabaseAdmin
+        .from("memberships")
+        .update({ user_id: authUserId })
+        .eq("email", email.toLowerCase().trim());
     }
 
     return NextResponse.json({ ok: true });
