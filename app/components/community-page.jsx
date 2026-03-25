@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 // ═══════════════════════════════════════════════════════════════
 // FORM & MEANING — COMMUNITY DIRECTORY
@@ -8,6 +9,7 @@ import { useState, useEffect } from "react";
 
 export default function CommunityPage({ members: serverMembers = [] }) {
   const [theme, setTheme] = useState("light");
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [disciplineFilter, setDisciplineFilter] = useState("All");
@@ -128,8 +130,8 @@ export default function CommunityPage({ members: serverMembers = [] }) {
           </button>
           <nav className="fm-desk-nav" style={{ display: "flex", alignItems: "center", gap: 2 }}>
             {navLinks.map(link => (
-              <button key={link.key} onClick={() => window.location.href=link.href} style={{ ...btnGhost, color: link.key === "community" ? c.red : c.textMuted, fontWeight: link.key === "community" ? 700 : 500, gap: 6 }}>
-                <span style={{ color: link.key === "community" ? c.red : c.textSoft }}>{link.icon}</span>{link.label}
+              <button key={link.key} onClick={() => window.location.href=link.href} style={{ ...btnGhost, color: pathname === link.href ? c.red : c.textMuted, fontWeight: pathname === link.href ? 700 : 500, gap: 6 }}>
+                <span style={{ color: pathname === link.href ? c.red : c.textSoft }}>{link.icon}</span>{link.label}
               </button>
             ))}
             <span style={{ width: 1, height: 20, background: c.border, margin: "0 6px" }} />
@@ -144,7 +146,7 @@ export default function CommunityPage({ members: serverMembers = [] }) {
         {menuOpen && (
           <div style={{ position: "fixed", inset: 0, top: 60, zIndex: 99, background: c.bg, padding: 24, animation: "fadeIn 0.15s ease", display: "flex", flexDirection: "column", gap: 4 }}>
             {navLinks.map(link => (
-              <button key={link.key} onClick={() => { setMenuOpen(false); window.location.href=link.href; }} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12, color: link.key === "community" ? c.red : c.textMuted, fontWeight: link.key === "community" ? 700 : 500 }}>{link.icon} {link.label}</button>
+              <button key={link.key} onClick={() => { setMenuOpen(false); window.location.href=link.href; }} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12, color: pathname === link.href ? c.red : c.textMuted, fontWeight: pathname === link.href ? 700 : 500 }}}>{link.icon} {link.label}</button>
             ))}
             <div style={{ height: 1, background: c.border, margin: "8px 0" }} />
             <button onClick={() => window.location.href="/profile"} style={{ ...btnGhost, fontSize: 17, padding: "16px 8px", width: "100%", justifyContent: "flex-start", gap: 12 }}><UserIco /> Profile</button>
